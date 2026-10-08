@@ -24,7 +24,7 @@ erDiagram
         uuid id PK
         uuid wallet_id FK
         varchar currency_code FK
-        numeric amount
+        numeric amount "CHECK (amount >= 0)"
     }
 
     MERCHANTS {
@@ -39,8 +39,8 @@ erDiagram
         uuid user_id FK
         uuid merchant_id FK "nullable"
         varchar type
-        varchar from_currency
-        varchar to_currency
+        varchar from_currency FK
+        varchar to_currency FK
         numeric from_amount
         numeric to_amount
         numeric rate_used
@@ -60,5 +60,7 @@ erDiagram
     USERS ||--o{ WALLETS : "posee"
     WALLETS ||--o{ WALLET_BALANCES : "contiene"
     CURRENCIES ||--o{ WALLET_BALANCES : "define"
+    CURRENCIES ||--o{ TRANSACTIONS : "origen"
+    CURRENCIES ||--o{ TRANSACTIONS : "destino"
     USERS ||--o{ TRANSACTIONS : "ejecuta"
     MERCHANTS ||--o{ TRANSACTIONS : "recibe_pago"
