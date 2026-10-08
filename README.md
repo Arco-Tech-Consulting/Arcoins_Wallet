@@ -6,7 +6,7 @@ Arcoins Wallet es una billetera digital desarrollada como proyecto Full Stack. L
 
 - Sebastián Pérez
 - Fabián Fonnegra
-- Marcos Luna
+- Marcos Alejandro Luna 
 - Chary Morales
 
 ## 🚀 Tecnologías
