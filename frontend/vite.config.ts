@@ -24,6 +24,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    optimizeDeps: {
+      exclude: ['msw', 'msw/browser', 'msw/node'],
+    },
     test: {
       environment: 'jsdom',
       globals: true,

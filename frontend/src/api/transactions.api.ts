@@ -7,6 +7,14 @@ import type {
   TransactionFilters,
 } from '@/types/api'
 
+interface ListEnvelope {
+  data: PaginatedTransactions
+}
+
+interface TransactionEnvelope {
+  transaction: Transaction
+}
+
 export async function getTransactions(
   filters: TransactionFilters = {},
 ): Promise<PaginatedTransactions> {
@@ -18,20 +26,28 @@ export async function getTransactions(
   if (filters.page) params.set('page', String(filters.page))
 
   const query = params.toString()
-  const data = await apiRequest(`/transactions${query ? `?${query}` : ''}`)
-  return data as PaginatedTransactions
+  const data = (await apiRequest(
+    `/transactions${query ? `?${query}` : ''}`,
+  )) as ListEnvelope
+  return data.data
 }
 
 export async function createTransaction(
   body: CreateTransactionRequest,
 ): Promise<Transaction> {
-  const data = await apiRequest('/transactions', { method: 'POST', body })
-  return data as Transaction
+  const data = (await apiRequest('/transactions', {
+    method: 'POST',
+    body,
+  })) as TransactionEnvelope
+  return data.transaction
 }
 
 export async function createPayment(
   body: CreatePaymentRequest,
 ): Promise<Transaction> {
-  const data = await apiRequest('/payments', { method: 'POST', body })
-  return data as Transaction
+  const data = (await apiRequest('/payments', {
+    method: 'POST',
+    body,
+  })) as TransactionEnvelope
+  return data.transaction
 }
