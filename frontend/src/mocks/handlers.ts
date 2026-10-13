@@ -1,0 +1,253 @@
+import { delay, http, HttpResponse } from 'msw'
+import type {
+  AuthResponse,
+  ChatResponse,
+  CreatePaymentRequest,
+  CreateTransactionRequest,
+  CurrencyCode,
+  LoginRequest,
+  PaginatedTransactions,
+  Rate,
+  RegisterRequest,
+  Transaction,
+  TransactionType,
+  User,
+  Wallet,
+  WalletBalance,
+} from '@/types/api'
+
+const RATE_FETCHED = new Date().toISOString()
+
+export const DEMO_TOKEN = 'demo-jwt-token'
+
+export const demoUser: User = {
+  id: 'usr_demo_001',
+  firstName: 'Sebastián',
+  lastName: 'Pérez',
+  email: 'sebastian@arcoins.app',
+}
+
+const balances: WalletBalance[] = [
+  { currency: 'COP', amount: 2_500_000 },
+  { currency: 'USD', amount: 1_200 },
+  { currency: 'EUR', amount: 850 },
+]
+
+const wallet: Wallet = { id: 'wal_demo_001' }
+
+const rates: Record<string, number> = {
+  'USD->COP': 4_180,
+  'EUR->COP': 4_550,
+  'EUR->USD': 1.09,
+  'COP->USD': 1 / 4_180,
+  'COP->EUR': 1 / 4_550,
+  'USD->EUR': 1 / 1.09,
+}
+
+const merchants = [
+  { id: 'mer_001', name: 'Hotel El Dorado', category: 'Alojamiento' },
+  { id: 'mer_002', name: 'Restaurante La Fogata', category: 'Comida' },
+  { id: 'mer_003', name: 'Transmetro', category: 'Transporte' },
+]
+
+const transactions: Transaction[] = [
+  {
+    id: 'tx_001',
+    type: 'deposit',
+    status: 'completed',
+    toCurrency: 'COP',
+    toAmount: 2_500_000,
+    description: 'Depósito en saldo',
+    createdAt: '2026-10-05T10:20:00.000Z',
+  },
+  {
+    id: 'tx_002',
+    type: 'buy',
+    status: 'completed',
+    fromCurrency: 'COP',
+    toCurrency: 'USD',
+    fromAmount: 836_000,
+    toAmount: 200,
+    rateUsed: 4_180,
+    rateTimestamp: '2026-10-08T09:00:00.000Z',
+    description: 'Compra de dólares',
+    createdAt: '2026-10-08T09:05:00.000Z',
+  },
+  {
+    id: 'tx_003',
+    type: 'exchange',
+    status: 'completed',
+    fromCurrency: 'USD',
+    toCurrency: 'EUR',
+    fromAmount: 100,
+    toAmount: 91.74,
+    rateUsed: 1.09,
+    rateTimestamp: '2026-10-10T14:30:00.000Z',
+    description: 'Conversión USD a EUR',
+    createdAt: '2026-10-10T14:32:00.000Z',
+  },
+  {
+    id: 'tx_004',
+    type: 'payment',
+    status: 'completed',
+    fromCurrency: 'COP',
+    fromAmount: 185_000,
+    description: 'Estadia en Hotel El Dorado',
+    createdAt: '2026-10-12T18:00:00.000Z',
+  },
+]
+
+function requireAuth(request: Request) {
+  const token = request.headers.get('Authorization')
+  if (!token || token !== `Bearer ${DEMO_TOKEN}`) {
+    return HttpResponse.json({ success: false, error: 'No autorizado' }, { status: 401 })
+  }
+  return null
+}
+
+export const handlers = [
+  // ---------- Auth ----------
+  http.post<never, LoginRequest>('/api/auth/login', async ({ request }) => {
+    await delay(300)
+    const body = await request.json()
+    if (!body.email || !body.password) {
+      return HttpResponse.json({ success: false, error: 'Credenciales inválidas' }, { status: 400 })
+    }
+    const response: AuthResponse = { token: DEMO_TOKEN, user: demoUser }
+    return HttpResponse.json({ success: true, ...response })
+  }),
+
+  http.post<never, RegisterRequest>('/api/auth/register', async ({ request }) => {
+    await delay(300)
+    const body = await request.json()
+    if (!body.email || !body.firstName || !body.lastName || !body.password) {
+      return HttpResponse.json({ success: false, error: 'Todos los campos son obligatorios' }, { status: 400 })
+    }
+    const response: AuthResponse = { token: DEMO_TOKEN, user: demoUser }
+    return HttpResponse.json({ success: true, ...response })
+  }),
+
+  http.get('/api/auth/me', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(200)
+    return HttpResponse.json({ success: true, user: demoUser })
+  }),
+
+  // ---------- Wallet ----------
+  http.get('/api/wallet', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(200)
+    return HttpResponse.json({ success: true, ...wallet })
+  }),
+
+  http.get('/api/wallet/balances', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(250)
+    return HttpResponse.json({ success: true, data: balances })
+  }),
+
+  // ---------- Rates ----------
+  http.get('/api/rates', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(200)
+    const url = new URL(request.url)
+    const base = url.searchParams.get('base') as CurrencyCode
+    const target = url.searchParams.get('target') as CurrencyCode
+    const rate = rates[`${base}->${target}`]
+    if (!rate) {
+      return HttpResponse.json({ success: false, error: 'Par de monedas no soportado' }, { status: 400 })
+    }
+    const response: Rate = { base, target, rate, fetchedAt: RATE_FETCHED }
+    return HttpResponse.json({ success: true, ...response })
+  }),
+
+  // ---------- Transactions ----------
+  http.get('/api/transactions', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(300)
+    const url = new URL(request.url)
+    const type = url.searchParams.get('type') as TransactionType | null
+    const currency = url.searchParams.get('currency') as CurrencyCode | null
+
+    let filtered = transactions
+    if (type) filtered = filtered.filter((tx) => tx.type === type)
+    if (currency) {
+      filtered = filtered.filter(
+        (tx) => tx.fromCurrency === currency || tx.toCurrency === currency,
+      )
+    }
+    const response: PaginatedTransactions = {
+      data: filtered,
+      page: 1,
+      total: filtered.length,
+    }
+    return HttpResponse.json({ success: true, data: response })
+  }),
+
+  http.post<never, CreateTransactionRequest>('/api/transactions', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(300)
+    const body = await request.json()
+    const rate = rates[`${body.fromCurrency}->${body.toCurrency}`]
+    if (!rate) {
+      return HttpResponse.json({ success: false, error: 'Par de monedas no soportado' }, { status: 400 })
+    }
+    const transaction: Transaction = {
+      id: `tx_${Date.now()}`,
+      type: body.type,
+      status: 'completed',
+      fromCurrency: body.fromCurrency,
+      toCurrency: body.toCurrency,
+      fromAmount: body.fromAmount,
+      toAmount: Number((body.fromAmount * rate).toFixed(8)),
+      rateUsed: rate,
+      rateTimestamp: RATE_FETCHED,
+      createdAt: new Date().toISOString(),
+    }
+    return HttpResponse.json({ success: true, transaction })
+  }),
+
+  http.post<never, CreatePaymentRequest>('/api/payments', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(300)
+    const body = await request.json()
+    const merchant = merchants.find((m) => m.id === body.merchantId)
+    const transaction: Transaction = {
+      id: `tx_${Date.now()}`,
+      type: 'payment',
+      status: 'completed',
+      fromCurrency: body.currency,
+      fromAmount: body.amount,
+      description: body.description ?? merchant?.name ?? 'Pago registrado',
+      createdAt: new Date().toISOString(),
+    }
+    return HttpResponse.json({ success: true, transaction })
+  }),
+
+  // ---------- Chat ----------
+  http.post<never, { message: string }>('/api/chat', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(500)
+    const body = await request.json()
+    const response: ChatResponse = {
+      reply: `[Demo] Recibido: "${body.message}". Soy el asistente de Arcoins Wallet, pronto podré ayudarte con conversiones y tu historial.`,
+    }
+    return HttpResponse.json({ success: true, ...response })
+  }),
+
+  // ---------- Extras ----------
+  http.get('/api/merchants', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(200)
+    return HttpResponse.json({ success: true, data: merchants })
+  }),
+]
