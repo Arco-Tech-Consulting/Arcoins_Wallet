@@ -80,4 +80,40 @@ export class FinancialController {
       res.status(400).json({ success: false, error: error.message });
     }
   }
+
+  //Metodo para obtener tazas 
+  public async getRates(req: Request, res: Response): Promise<void> {
+    try{ 
+      const base = String(req.query.base || 'USD').toUpperCase();
+      const target = String(req.query.target || 'COP').toUpperCase();
+
+      const rateData = await financialRepository.getExchangeRate(base, target);
+
+      if(!rateData) {
+        res.status(404).json({ success: false, error: 'Tasa de cambio no encontrada' });
+        return;
+      }
+
+      res.status(200).json(rateData);
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message});
+    }
+  }
+
+  //Se obtiene el hsitorial de transacciones
+  public async getTransactions(req: Request, res: Response): Promise<void> {
+    try {
+      const { type, currency, page } = req.query;
+      const walletId = 'b0000000-0000-0000-0000-000000000001';
+
+      const result = await financialRepository.getTransactions(walletId, {
+        type: type ? String(type) : undefined,
+        currency: currency ? String(currency) : undefined,
+        page: page ? String(page) : undefined 
+      });
+      res.status(200).json({ data: result });
+    } catch (error: any) {
+      res.status(400).json({ succes: false, error: error.message });
+    }
+  }
 }

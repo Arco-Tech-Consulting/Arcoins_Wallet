@@ -9,5 +9,6 @@ router.get('/balance/:walletId/:currency', (req, res) => financialController.get
 router.post('/deposit', (req, res) => financialController.deposit(req, res));
 router.get('/wallet/balances', (req, res) => financialController.getWalletBalances(req, res));
 router.get('/wallet', (req, res) => financialController.getWallet(req, res));
-
+router.get('/rates', (req, res) => financialController.getRates(req, res));
+router.get('/transactions', (req, res) => financialController.getTransactions(req, res));
 export default router;
