@@ -83,16 +83,16 @@ export default function ChatPage() {
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <header>
-        <h1 className="text-2xl font-bold text-ink-900">
+        <h1 className="font-display text-headline-md text-on-surface">
           Asistente de Arcoins
         </h1>
-        <p className="mt-2 text-sm text-ink-600">
+        <p className="mt-2 text-sm text-on-surface-variant">
           Consulta sobre la billetera y la organización de tus gastos.
         </p>
       </header>
 
       <Card>
-        <p className="mb-4 rounded-lg bg-brand-50 p-3 text-sm text-brand-800">
+        <p className="mb-4 rounded-lg bg-primary/10 p-3 text-sm text-primary">
           Modo demostración: todavía no hay conexión con Gemini.
         </p>
 
@@ -105,20 +105,20 @@ export default function ChatPage() {
             <div
               key={item.id}
               className={`max-w-lg rounded-xl p-4 ${item.role === 'user'
-                ? 'ml-auto bg-brand-50'
-                : 'bg-ink-100'
+                ? 'ml-auto bg-primary-container/20'
+                : 'bg-surface-container-high'
                 }`}
             >
-              <p className="mb-1 text-sm font-semibold text-ink-900">
+              <p className="mb-1 text-sm font-semibold text-on-surface">
                 {item.role === 'user' ? 'Tú' : 'Asistente'}
               </p>
-              <p className="whitespace-pre-wrap break-words text-sm text-ink-700">
+              <p className="whitespace-pre-wrap break-words text-sm text-on-surface-variant">
                 {item.text}
               </p>
             </div>
           ))}
         </div>
-        <label className="mt-4 flex items-center gap-2 text-sm text-ink-600">
+        <label className="mt-4 flex items-center gap-2 text-sm text-on-surface-variant">
           <input
             type="checkbox"
             checked={simulateError}
@@ -129,8 +129,8 @@ export default function ChatPage() {
         </label>
 
         {error && (
-          <div className="mt-4 rounded-lg bg-red-50 p-3">
-            <p role="alert" className="text-sm text-red-700">
+          <div className="mt-4 rounded-lg bg-error-container/30 p-3">
+            <p role="alert" className="text-sm text-on-error-container">
               {error}
             </p>
 
@@ -150,7 +150,7 @@ export default function ChatPage() {
           </div>
         )}
         <form
-          className="mt-4 border-t border-ink-200 pt-4"
+          className="mt-4 border-t border-outline-variant/40 pt-4"
           onSubmit={(event) => {
             event.preventDefault()
             handleSend()
@@ -167,7 +167,7 @@ export default function ChatPage() {
             disabled={isLoading}
           />
 
-          <p id="chat-help" className="mt-2 text-xs text-ink-500">
+          <p id="chat-help" className="mt-2 text-xs text-outline">
             No compartas contraseñas, tokens ni información sensible.
           </p>
 

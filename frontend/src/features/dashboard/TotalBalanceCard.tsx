@@ -18,29 +18,31 @@ export function TotalBalanceCard({
   onReferenceChange,
 }: TotalBalanceCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 p-6 text-white shadow-lg">
-      <div className="flex items-start justify-between gap-4">
+    <div className="relative overflow-hidden rounded-xl bg-surface-container p-6 shadow-xl">
+      <div className="pointer-events-none absolute -bottom-12 -right-12 h-64 w-64 rounded-full bg-primary/10 blur-2xl" />
+
+      <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-brand-100">
+          <p className="text-xs uppercase tracking-wider text-outline">
             Total aproximado
           </p>
-          <div className="mt-2 min-h-11">
+          <div className="mt-1 min-h-11">
             {loading ? (
               <div className="flex items-center">
-                <Spinner className="size-6" />
+                <Spinner className="size-6 text-primary" />
               </div>
             ) : (
-              <p className="text-3xl font-bold tracking-tight">
+              <p className="font-display text-currency-display text-on-surface">
                 {formatAmount(total, reference)}
               </p>
             )}
           </div>
-          <p className="mt-1 text-xs text-brand-200">
+          <p className="mt-1 text-xs text-on-surface-variant">
             {timestamp ? `Tasas del ${timestamp}` : 'Tasas en tiempo real'}
           </p>
         </div>
 
-        <div className="flex shrink-0 gap-1 rounded-lg bg-brand-950/40 p-1">
+        <div className="flex shrink-0 gap-1 rounded-lg bg-surface-container-lowest p-1">
           {CURRENCIES.map((currency) => (
             <button
               key={currency}
@@ -48,8 +50,8 @@ export function TotalBalanceCard({
               onClick={() => onReferenceChange(currency)}
               className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
                 currency === reference
-                  ? 'bg-white text-brand-900'
-                  : 'text-brand-100 hover:bg-brand-900/40'
+                  ? 'bg-primary-container text-on-primary-container'
+                  : 'text-on-surface-variant hover:bg-surface-container-high'
               }`}
             >
               {currency}

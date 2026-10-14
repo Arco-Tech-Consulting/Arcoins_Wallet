@@ -19,11 +19,11 @@ export default function AppLayout() {
   const { user, logout } = useAuth()
 
   return (
-    <div className="min-h-svh bg-ink-50">
-      <header className="sticky top-0 z-10 border-b border-ink-200 bg-white/90 backdrop-blur">
+    <div className="min-h-svh bg-surface">
+      <header className="sticky top-0 z-10 border-b border-outline-variant/40 bg-surface-container-low/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-8">
-            <span className="text-lg font-bold tracking-tight text-ink-900">
+            <span className="font-display text-lg font-bold tracking-tight text-on-surface">
               Arcoins Wallet
             </span>
             <nav className="hidden items-center gap-1 sm:flex">
@@ -35,8 +35,8 @@ export default function AppLayout() {
                   className={({ isActive }) =>
                     `rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-brand-50 text-brand-700'
-                        : 'text-ink-500 hover:bg-ink-100 hover:text-ink-800'
+                        ? 'bg-primary-container/20 text-primary'
+                        : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                     }`
                   }
                 >
@@ -48,7 +48,7 @@ export default function AppLayout() {
 
           <div className="flex items-center gap-3">
             {user ? (
-              <span className="hidden text-sm text-ink-600 sm:block">
+              <span className="hidden text-sm text-on-surface-variant sm:block">
                 {user.firstName} {user.lastName}
               </span>
             ) : null}
