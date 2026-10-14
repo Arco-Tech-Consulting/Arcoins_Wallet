@@ -34,8 +34,8 @@ export default function RegisterPage() {
 
   return (
     <Card>
-      <h2 className="mb-1 text-xl font-semibold text-ink-900">Crear cuenta</h2>
-      <p className="mb-6 text-sm text-ink-500">
+      <h2 className="mb-1 text-xl font-semibold text-on-surface">Crear cuenta</h2>
+      <p className="mb-6 text-sm text-on-surface-variant">
         Administra tus saldos en COP, USD y EUR
       </p>
 
@@ -73,7 +73,7 @@ export default function RegisterPage() {
         />
 
         {error ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm text-on-error-container">
             {error}
           </p>
         ) : null}
@@ -83,9 +83,9 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-ink-500">
+      <p className="mt-6 text-center text-sm text-on-surface-variant">
         ¿Ya tienes cuenta?{' '}
-        <Link to="/login" className="font-medium text-brand-600 hover:underline">
+        <Link to="/login" className="font-medium text-primary hover:underline">
           Inicia sesión
         </Link>
       </p>

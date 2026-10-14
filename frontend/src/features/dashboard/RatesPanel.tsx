@@ -19,10 +19,10 @@ export function RatesPanel({ rates, loading, error }: RatesPanelProps) {
   if (error) {
     return (
       <Card>
-        <h3 className="mb-1 text-sm font-semibold text-ink-900">
+        <h3 className="mb-1 text-sm font-semibold text-on-surface">
           Tasas de cambio
         </h3>
-        <p className="text-sm text-ink-500">
+        <p className="text-sm text-on-surface-variant">
           No pudimos obtener las tasas. Intenta de nuevo.
         </p>
       </Card>
@@ -32,33 +32,33 @@ export function RatesPanel({ rates, loading, error }: RatesPanelProps) {
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-ink-900">
+        <h3 className="text-sm font-semibold text-on-surface">
           Tasas de cambio
         </h3>
         {loading ? (
-          <Spinner className="size-4 text-ink-400" />
+          <Spinner className="size-4 text-outline" />
         ) : null}
       </div>
 
       {rates.length === 0 ? (
-        <p className="text-sm text-ink-500">Cargando tasas…</p>
+        <p className="text-sm text-on-surface-variant">Cargando tasas…</p>
       ) : (
-        <ul className="divide-y divide-ink-100">
+        <ul className="divide-y divide-outline-variant/30">
           {rates.map((rate) => (
             <li
               key={`${rate.base}-${rate.target}`}
               className="flex items-center justify-between gap-4 py-3"
             >
               <div>
-                <p className="text-sm font-medium text-ink-800">
+                <p className="text-sm font-medium text-on-surface">
                   {PAIR_LABEL[`${rate.base}->${rate.target}`] ??
                     `${rate.base} → ${rate.target}`}
                 </p>
-                <p className="text-xs text-ink-400">
+                <p className="text-xs text-outline">
                   Actualizada {formatRateTimestamp(rate.fetchedAt)}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-ink-900">
+              <p className="font-display text-sm font-semibold text-tertiary">
                 {formatRate(rate.rate, rate.base, rate.target)}
               </p>
             </li>

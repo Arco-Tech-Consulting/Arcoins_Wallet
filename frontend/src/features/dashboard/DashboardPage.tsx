@@ -53,7 +53,7 @@ export default function DashboardPage() {
   if (balancesQuery.isError || !balancesQuery.data) {
     return (
       <Card>
-        <p className="text-ink-500">
+        <p className="text-on-surface-variant">
           No se pudieron cargar los saldos. Intenta de nuevo.
         </p>
       </Card>
@@ -74,8 +74,8 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-semibold text-ink-900">Dashboard</h2>
-        <p className="text-sm text-ink-500">
+        <h2 className="font-display text-headline-md text-on-surface">Dashboard</h2>
+        <p className="text-sm text-on-surface-variant">
           Tus saldos en COP, USD y EUR
         </p>
       </div>
@@ -96,11 +96,11 @@ export default function DashboardPage() {
           const meta = CURRENCY_META[currency]
           return (
             <Card key={currency} className="flex flex-col gap-1">
-              <span className="text-sm text-ink-500">{meta.name}</span>
-              <span className="text-2xl font-bold tracking-tight text-ink-900">
+              <span className="text-sm text-on-surface-variant">{meta.name}</span>
+              <span className="font-display text-headline-md text-on-surface">
                 {formatSymbolAmount(amount, currency)}
               </span>
-              <span className="text-xs uppercase text-ink-400">{currency}</span>
+              <span className="text-xs uppercase text-outline">{currency}</span>
             </Card>
           )
         })}

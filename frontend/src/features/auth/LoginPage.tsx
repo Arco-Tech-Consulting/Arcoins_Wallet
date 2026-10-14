@@ -30,8 +30,8 @@ export default function LoginPage() {
 
   return (
     <Card>
-      <h2 className="mb-1 text-xl font-semibold text-ink-900">Iniciar sesión</h2>
-      <p className="mb-6 text-sm text-ink-500">
+      <h2 className="mb-1 text-xl font-semibold text-on-surface">Iniciar sesión</h2>
+      <p className="mb-6 text-sm text-on-surface-variant">
         Ingresa con tu correo para acceder a tu billetera
       </p>
 
@@ -54,7 +54,7 @@ export default function LoginPage() {
         />
 
         {error ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm text-on-error-container">
             {error}
           </p>
         ) : null}
@@ -64,9 +64,9 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-ink-500">
+      <p className="mt-6 text-center text-sm text-on-surface-variant">
         ¿No tienes cuenta?{' '}
-        <Link to="/register" className="font-medium text-brand-600 hover:underline">
+        <Link to="/register" className="font-medium text-primary hover:underline">
           Regístrate
         </Link>
       </p>

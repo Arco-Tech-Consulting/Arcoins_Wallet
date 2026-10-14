@@ -1,30 +1,101 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  /* --- Tipografía --- */
+  --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-mono: ui-monospace, Consolas, monospace;
 
-  --color-brand-50: #f6f2ff;
-  --color-brand-100: #ece3ff;
-  --color-brand-200: #dacbff;
-  --color-brand-300: #bfa2ff;
-  --color-brand-400: #a06dff;
-  --color-brand-500: #8a3bff;
-  --color-brand-600: #7b1df2;
-  --color-brand-700: #6a12d1;
-  --color-brand-800: #5912a8;
-  --color-brand-900: #4a1187;
-  --color-brand-950: #2d0559;
+  /* --- Escala destacada --- */
+  --text-currency-display: 2.25rem;
+  --text-currency-display--line-height: 2.75rem;
+  --text-currency-display--letter-spacing: -0.03em;
+  --text-currency-display--font-weight: 700;
 
-  --color-ink-50: #f7f7f9;
-  --color-ink-100: #eeeef2;
-  --color-ink-200: #e3e3ea;
-  --color-ink-300: #c9c9d4;
-  --color-ink-400: #a3a3b5;
-  --color-ink-500: #81819a;
-  --color-ink-600: #646480;
-  --color-ink-700: #525269;
-  --color-ink-800: #3c3c4e;
-  --color-ink-900: #23232f;
-  --color-ink-950: #121219;
+  --text-headline-xl: 2.5rem;
+  --text-headline-xl--line-height: 3rem;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 700;
+
+  --text-headline-md: 1.25rem;
+  --text-headline-md--line-height: 1.75rem;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 600;
+
+  /* --- Superficies --- */
+  --color-surface: #0f131d;
+  --color-surface-dim: #0f131d;
+  --color-surface-bright: #353944;
+  --color-surface-variant: #313540;
+  --color-surface-tint: #adc6ff;
+  --color-surface-container-lowest: #0a0e18;
+  --color-surface-container-low: #171b26;
+  --color-surface-container: #1c1f2a;
+  --color-surface-container-high: #262a35;
+  --color-surface-container-highest: #313540;
+  --color-background: #0f131d;
+  --color-on-background: #dfe2f1;
+  --color-on-surface: #dfe2f1;
+  --color-on-surface-variant: #c2c6d6;
+  --color-inverse-surface: #dfe2f1;
+  --color-inverse-on-surface: #2c303b;
+
+  /* --- Contornos --- */
+  --color-outline: #8c909f;
+  --color-outline-variant: #424754;
+
+  /* --- Primario (azul) --- */
+  --color-primary: #adc6ff;
+  --color-primary-container: #4d8eff;
+  --color-on-primary: #002e6a;
+  --color-on-primary-container: #00285d;
+  --color-primary-fixed: #d8e2ff;
+  --color-primary-fixed-dim: #adc6ff;
+  --color-inverse-primary: #005ac2;
+
+  /* --- Secundario (verde) --- */
+  --color-secondary: #4edea3;
+  --color-secondary-container: #00a572;
+  --color-on-secondary: #003824;
+  --color-on-secondary-container: #00311f;
+  --color-secondary-fixed: #6ffbbe;
+  --color-secondary-fixed-dim: #4edea3;
+
+  /* --- Terciario (ámbar) --- */
+  --color-tertiary: #ffb95f;
+  --color-tertiary-container: #ca8100;
+  --color-on-tertiary: #472a00;
+  --color-on-tertiary-container: #3e2400;
+  --color-tertiary-fixed: #ffddb8;
+  --color-tertiary-fixed-dim: #ffb95f;
+
+  /* --- Error --- */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+
+  /* --- Radios (MD3) --- */
+  --radius-DEFAULT: 0.25rem;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
 }
