@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 
 type ChatMessage = {
@@ -11,7 +11,12 @@ type ChatMessage = {
 }
 
 export default function ChatPage() {
+  const [error, setError] = useState<string | null>(null)
+  const [failedMessage, setFailedMessage] = useState<string | null>(null)
+  const [simulateError, setSimulateError] = useState(false)
   const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const requestInFlight = useRef(false)
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -20,28 +25,59 @@ export default function ChatPage() {
     },
   ])
 
-  function handleSend() {
-    const text = message.trim()
 
-    if (!text || text.length > 2000) return
+  async function handleSend(retryText?: string) {
+    const text = retryText ?? message.trim()
+    const isRetry = retryText !== undefined
 
-    setMessages((previous) => [
-      ...previous,
-      {
-        id: crypto.randomUUID(),
-        role: 'user',
-        text,
-      },
-      {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text: 'Respuesta simulada: recibí tu mensaje. La conexión con Gemini todavía está pendiente.',
-      },
-    ])
+    if (!text || text.length > 2000 || requestInFlight.current) return
 
-    setMessage('')
+    requestInFlight.current = true
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      if (!isRetry) {
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: crypto.randomUUID(),
+            role: 'user',
+            text,
+          },
+        ])
+
+        setMessage('')
+      }
+
+      // Demora simulada: no llama al backend ni a Gemini.
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 1000)
+      })
+
+      if (simulateError) {
+        setSimulateError(false)
+        throw new Error('Fallo simulado')
+      }
+
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: 'Respuesta simulada: recibí tu mensaje. La conexión con Gemini todavía está pendiente.',
+        },
+      ])
+
+      setFailedMessage(null)
+    } catch {
+      setError('No se pudo obtener la respuesta. Puedes reintentar.')
+      setFailedMessage(text)
+    } finally {
+      requestInFlight.current = false
+      setIsLoading(false)
+    }
   }
-
 
 
   return (
@@ -82,6 +118,37 @@ export default function ChatPage() {
             </div>
           ))}
         </div>
+        <label className="mt-4 flex items-center gap-2 text-sm text-ink-600">
+          <input
+            type="checkbox"
+            checked={simulateError}
+            disabled={isLoading}
+            onChange={(event) => setSimulateError(event.target.checked)}
+          />
+          Demostración: hacer fallar el siguiente intento
+        </label>
+
+        {error && (
+          <div className="mt-4 rounded-lg bg-red-50 p-3">
+            <p role="alert" className="text-sm text-red-700">
+              {error}
+            </p>
+
+            {failedMessage !== null && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-2"
+                disabled={isLoading}
+                onClick={() => {
+                  void handleSend(failedMessage)
+                }}
+              >
+                Reintentar
+              </Button>
+            )}
+          </div>
+        )}
         <form
           className="mt-4 border-t border-ink-200 pt-4"
           onSubmit={(event) => {
@@ -97,6 +164,7 @@ export default function ChatPage() {
             aria-describedby="chat-help"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
+            disabled={isLoading}
           />
 
           <p id="chat-help" className="mt-2 text-xs text-ink-500">
@@ -104,8 +172,12 @@ export default function ChatPage() {
           </p>
 
           <div className="mt-3 flex justify-end">
-            <Button type="submit" disabled={!message.trim()}>
-              Enviar
+            <Button
+              type="submit"
+              loading={isLoading}
+              disabled={!message.trim() || isLoading}
+            >
+              {isLoading ? 'Respondiendo…' : 'Enviar'}
             </Button>
           </div>
         </form>
