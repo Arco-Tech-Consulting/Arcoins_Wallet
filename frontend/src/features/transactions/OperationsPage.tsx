@@ -108,7 +108,7 @@ export default function OperationsPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
             <Select
-              label="Entregás"
+              label="Entregas"
               value={fromCurrency}
               onChange={(event) =>
                 setFromCurrency(event.target.value as CurrencyCode)
@@ -142,7 +142,7 @@ export default function OperationsPage() {
             </button>
 
             <Select
-              label="Recibís"
+              label="Recibes"
               value={toCurrency}
               onChange={(event) =>
                 setToCurrency(event.target.value as CurrencyCode)
@@ -170,7 +170,7 @@ export default function OperationsPage() {
           <div className="rounded-lg bg-surface-container-high/60 p-4 text-sm">
             {sameCurrency ? (
               <p className="text-on-surface-variant">
-                Elegí dos monedas distintas para ver la tasa.
+                Elige dos monedas distintas para ver la tasa.
               </p>
             ) : rateQuery.isLoading ? (
               <p className="text-on-surface-variant">Obteniendo tasa…</p>
@@ -185,7 +185,7 @@ export default function OperationsPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-on-surface-variant">Recibís</span>
+                  <span className="text-on-surface-variant">Recibes</span>
                   <span className="font-display text-headline-md text-on-surface">
                     {formatSymbolAmount(converted, toCurrency)}
                   </span>
