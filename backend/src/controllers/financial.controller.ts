@@ -116,4 +116,70 @@ export class FinancialController {
       res.status(400).json({ succes: false, error: error.message });
     }
   }
+
+  /**
+   * Procesa operaciones de compra, venta o intercambio
+   * POST /api/transactions
+   */
+  public async createTransaction(req: Request, res: Response): Promise<void> {
+    try{
+      const { type, fromCurrency, toCurrency, fromAmount } = req.body;
+      
+      // ID de usuario de prueba por defecto (Ana Gómez)
+      const userId = 'a0000000-0000-0000-0000-000000000001';
+
+      // Validaciones básicas de negocio
+      if (!['buy', 'sell', 'exchange'].includes(type)) {
+        res.status(400).json({ success: false, error: 'Tipo de transacción inválida'});
+        return
+      }
+
+      //Calculo simulado o tasa base de ejemplo para la conversion de toAmount
+      const rateUsed = fromCurrency === 'COP' && toCurrency === 'USD' ? 0.00025 : 4000;
+      const toAmount = fromAmount * rateUsed;
+
+      const transaction = await financialRepository.createExchangeTransaction({
+        user_id: userId,
+        type,
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        from_amount: fromAmount,
+        to_amount: toAmount,
+        rate_used: rateUsed,
+        description: `${type.toUpperCase()} de ${fromCurrency} a ${toCurrency}`
+      });
+
+      res.status(200).json({ transaction });
+    } catch (error: any) {
+      res.status(400).json({ success: false, erro: error.message });
+    }
+  }
+
+  /**
+   * Procesa pagos a comercios
+   * POST /api/payments
+   */
+  public async createPayment(req: Request, res: Response): Promise<void> {
+    try{
+      const { currency, amount, merchantId, description } = req.body;
+      const userId = 'a0000000-0000-0000-0000-000000000001';
+
+      if (!currency || !amount || !merchantId) {
+        res.status(400).json({ success: false, error: 'Faltan campos obligatorios para el pago.'});
+        return;
+      }
+
+      const transaction = await financialRepository.createPayment({
+        user_id: userId,
+        currency,
+        amount,
+        merchantId,
+        description
+      });
+      
+      res.status(201).json({ transaction });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
 }

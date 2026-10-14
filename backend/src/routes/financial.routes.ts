@@ -11,4 +11,6 @@ router.get('/wallet/balances', (req, res) => financialController.getWalletBalanc
 router.get('/wallet', (req, res) => financialController.getWallet(req, res));
 router.get('/rates', (req, res) => financialController.getRates(req, res));
 router.get('/transactions', (req, res) => financialController.getTransactions(req, res));
+router.post('/transactions', (req, res) => financialController.createTransaction(req, res));
+router.post('/payments', (req, res) => financialController.createPayment(req, res));
 export default router;
