@@ -1,19 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getRate } from '@/api/rates.api'
 import { createTransaction, getTransactions } from '@/api/transactions.api'
-import type {
-  CreateTransactionRequest,
-  CurrencyCode,
-  TransactionFilters,
-} from '@/types/api'
+import type { CreateTransactionRequest, TransactionFilters } from '@/types/api'
 
-export function useRate(base: CurrencyCode, target: CurrencyCode) {
-  return useQuery({
-    queryKey: ['rate', base, target],
-    queryFn: () => getRate(base, target),
-    enabled: base !== target,
-  })
-}
+export { useRate } from '@/hooks/useRate'
 
 export function useTransactions(filters: TransactionFilters) {
   return useQuery({
