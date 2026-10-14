@@ -17,40 +17,225 @@ export class FinancialRepository {
   /**
    * Registra una nueva transacción en la base de datos alineada con el esquema de Marcos.
    */
-  public async createTransaction(data: {
+  public async createTransaction(req: Request, res: Response): Promise<void> {
+    try {
+      const { type, fromCurrency, toCurrency, fromAmount } = req.body;
+      const userId = 'a0000000-0000-0000-0000-000000000001';
+
+      if (!['buy', 'sell', 'exchange'].includes(type)) {
+        res.status(400).json({ success: false, error: 'Tipo de transacción inválido' });
+        return;
+      }
+
+      // Calcular la tasa según las monedas
+      let rateUsed = 0.00025; // COP -> USD
+      if (fromCurrency === 'USD' && toCurrency === 'COP') rateUsed = 4000;
+      if (fromCurrency === 'EUR' && toCurrency === 'COP') rateUsed = 4400;
+      if (fromCurrency === 'USD' && toCurrency === 'EUR') rateUsed = 0.909;
+
+      const toAmount = fromAmount * rateUsed;
+
+      const transaction = await financialRepository.createExchangeTransaction({
+        user_id: userId,
+        type,
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        from_amount: fromAmount,
+        to_amount: toAmount,
+        rate_used: rateUsed,
+        description: `${type.toUpperCase()} de ${fromCurrency} a ${toCurrency}`
+      });
+
+      res.status(201).json({ transaction });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
+
+  public async getWalletBalances(walletId: string) {
+    const query = `SELECT currency, amount FROM wallet_balances WHERE wallet_id = $1;`;
+    const result = await pool.query(query, [walletId]);
+
+    return result.rows.map((row: any) => ({
+      currency: row.currency,
+      amount: parseFloat(row.amount),
+    }));
+  }
+
+  public async getExchangeRate(base: string, target: string) {
+    const query = `
+    SELECT base_currency, target_currency, rate, fetched_at
+    FROM exchange_rates
+    WHERE base_currency = $1 AND target_currency = $2
+    ORDER BY fetched_at DESC
+    LIMIT 1;
+    `;
+    const result = await pool.query(query, [base, target]);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      base: row.base_currency,
+      target: row.target_currency,
+      rate: parseFloat(row.rate),
+      fetchedAt: row.fetched_at,
+    };
+  }
+
+  public async getTransactions(
+    walletId: string,
+    filters: { type?: string; currency?: string; page?: string }
+  ) {
+    const page = parseInt(filters.page || "1", 10);
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
+    // Consulta base para transacciones de la wallet / usuario de prueba (Ana)
+    let query = `
+  SELECT id, type, status, from_currency, to_currency, from_amount, to_amount, 
+         rate_used, rate_timestamp, description, created_at 
+  FROM transactions 
+  WHERE user_id = 'a0000000-0000-0000-0000-000000000001'
+  `;
+
+    const queryParams: any[] = [];
+
+    if (filters.type) {
+      queryParams.push(filters.type);
+      query += `AND type = $${queryParams.length}`;
+    }
+
+    query += `ORDER BY  created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+
+    const result = await pool.query(query, queryParams);
+
+    //Consulta para el total (Para la paginacion del contrato)
+    const countResult = await pool.query(`
+    SELECT COUNT(*) FROM transactions 
+    WHERE user_id = 'a0000000-0000-0000-0000-000000000001'
+  `);
+    const total = parseInt(countResult.rows[0].count, 10 );
+
+    const transactionsFormatted = result.rows.map((row: any) => ({
+      id: row.id,
+      type: row.type,
+      status: row.status || 'completed',
+      fromCurrency: row.from_currency,
+      toCurrency: row.to_currency,
+      fromAmount: row.from_amount ? parseFloat(row.from_amount) : null,
+      toAmount: row.to_amount ? parseFloat(row.to_amount) : null,
+      rateUsed: row.rate_used ? parseFloat(row.rate_used) : null,
+      rateTimestamp: row.rate_timestamp,
+      description: row.description,
+      createdAt: row.created_at
+    }));
+
+    return {
+      data: transactionsFormatted,
+      page, total
+    };
+  }
+
+  /**
+   * Aqui se crea una transaccion general como buy, sell, exchange, deposit, etc
+   */
+
+  public async createExchangeTransaction(data: {
     user_id: string;
     type: string;
-    status?: string;
-    from_currency?: string | null;
-    to_currency?: string | null;
-    from_amount?: number | null;
-    to_amount?: number | null;
-    rate_used?: number | null;
-    rate_timestamp?: Date | null;
-    description?: string | null;
+    from_currency?: string;
+    to_currency?: string;
+    from_amount?: number;
+    to_amount?: number;
+    rate_used?: number;
+    description?: string;
   }) {
     const query = `
-    INSERT INTO transactions (
-        user_id, type, status, from_currency, to_currency,
-        from_amount, to_amount, rate_used, rate_timestamp, description
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    RETURNING *;
+      INSERT INTO transactions (
+        user_id, 
+        type, 
+        from_currency, 
+        to_currency, 
+        from_amount, 
+        to_amount, 
+        rate_used, 
+        rate_timestamp,
+        description, 
+        status, 
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, 'completed', NOW())
+      RETURNING id, type, status, from_currency, to_currency, from_amount, to_amount, rate_used, rate_timestamp, description, created_at;
     `;
-
+    
     const values = [
       data.user_id,
       data.type,
-      data.status || "completed",
       data.from_currency || null,
       data.to_currency || null,
       data.from_amount || null,
       data.to_amount || null,
-      data.rate_used || null,
-      data.rate_timestamp || null,
-      data.description || null,
+      data.rate_used && data.rate_used > 0 ? data.rate_used : 0.00025,
+      data.description || null
     ];
 
     const result = await pool.query(query, values);
-    return result.rows[0];
+    const row = result.rows[0];
+
+    return {
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      fromCurrency: row.from_currency,
+      toCurrency: row.to_currency,
+      fromAmount: row.from_amount ? parseFloat(row.from_amount) : null,
+      toAmount: row.to_amount ? parseFloat(row.to_amount) : null,
+      rateUsed: row.rate_used ? parseFloat(row.rate_used) : null,
+      rateTimestamp: row.rate_timestamp,
+      description: row.description,
+      createdAt: row.created_at
+    };
+  }
+
+  /**
+   * Aqui creamos un pago al comercio 
+   */
+  public async createPayment(data: {
+    user_id: string;
+    currency: string;
+    amount: number;
+    merchantId: string;
+    description?: string;
+  }) {
+    const query = `
+      INSERT INTO transactions (user_id, type, from_currency, from_amount, merchant_id, description, status, created_at)
+      VALUES ($1, 'payment', $2, $3, $4, $5, 'completed', NOW())
+      RETURNING id, type, status, from_currency, from_amount, merchant_id, description, created_at;
+    `;
+
+    const values = [
+      data.user_id,
+      data.currency,
+      data.amount,
+      data.merchantId,
+      data.description || 'Pago a comercio'
+    ];
+
+    const result = await pool.query(query, values);
+    const row = result.rows[0];
+
+    return {
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      fromCurrency: row.from_currency,
+      fromAmount: parseFloat(row.from_amount),
+      merchantId: row.merchant_id,
+      description: row.description,
+      createdAt: row.created_at
+    };
   }
 }
