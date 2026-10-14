@@ -53,4 +53,16 @@ export class FinancialRepository {
     const result = await pool.query(query, values);
     return result.rows[0];
   }
+
+  public async getWalletBalances(walletId: string) {
+    const query = `SELECT currency, amount FROM wallet_balances WHERE wallet_id = $1;`;
+    const result = await pool.query(query, [walletId]);
+
+    return result.rows.map((row: any) => ({
+      currency: row.currency,
+      amount: parseFloat(row.amount)
+    }));
+  }
+
+
 }
