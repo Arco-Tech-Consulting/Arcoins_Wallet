@@ -1,8 +1,7 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AuthenticatedRequest, JwtPayload } from '../types/auth.types';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'arcoins_wallet_jwt_secret_dev_key_2026';
+import { getJwtConfig } from '../config/jwt.config';
 
 /**
  * Middleware para validar el token JWT en rutas protegidas.
@@ -27,8 +26,9 @@ export function authenticateToken(
   }
 
   const token = parts[1];
+  const { secret } = getJwtConfig();
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, secret, (err, decoded) => {
     if (err) {
       res.status(401).json({ error: 'Token inválido o expirado' });
       return;
