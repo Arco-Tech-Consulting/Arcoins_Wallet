@@ -8,9 +8,7 @@ import {
   RegisterDto,
   UserResponse,
 } from '../types/auth.types';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'arcoins_wallet_jwt_secret_dev_key_2026';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+import { getJwtConfig } from '../config/jwt.config';
 
 export class AuthError extends Error {
   constructor(message: string, public statusCode: number = 400) {
@@ -24,8 +22,9 @@ export class AuthService {
    * Genera un token JWT firmado.
    */
   public generateToken(payload: JwtPayload): string {
-    return jwt.sign(payload, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+    const { secret, expiresIn } = getJwtConfig();
+    return jwt.sign(payload, secret, {
+      expiresIn: expiresIn as jwt.SignOptions['expiresIn'],
     });
   }
 
