@@ -11,10 +11,11 @@ La primera versión no consultará saldos ni movimientos reales.
 El asistente no ejecutará operaciones ni modificará cuentas.
 
 ## Endpoint propuesto
-POST /api/assistant/chat
+POST /api/chat
 
-La ruta completa queda pendiente de confirmar según dónde
-se monten los routers del backend.
+El servidor monta el router principal bajo /api.
+Queda pendiente implementar y montar la ruta /chat.
+
 
 ## Solicitud
 El cuerpo será JSON y contendrá únicamente:
@@ -28,7 +29,6 @@ HTTP 200
 
 ```json
 {
-  "success": true,
   "reply": "Una billetera digital permite gestionar saldos y movimientos."
 }
 ```
@@ -38,7 +38,6 @@ HTTP 200
 ## Errores previstos
 ```json
 {
-  "success": false,
   "error": "El asistente no está disponible. Intenta más tarde."
 }
 ```
@@ -54,18 +53,19 @@ Los mensajes serán controlados por nuestro backend.
 No se devolverán directamente los errores internos de Gemini.
 
 ## Acuerdos pendientes
-- Marcos: middleware JWT y ubicación del ID del usuario validado.
-- Backend: formato de respuestas y errores, y montaje de la ruta.
+- Backend: confirmar el montaje efectivo de POST /api/chat.
 - Sebas: consumo de la respuesta y estados de carga/error/reintento.
 - Definir el límite de solicitudes por usuario antes de publicar.
 
 ## Autenticación y privacidad
 
-La ruta requerirá un JWT válido, verificado por el middleware
-de autenticación del backend.
+El middleware existente es authenticateToken.
+Después de verificar el JWT, deja la identidad en req.user.
+El identificador del usuario está disponible en req.user.id.
+La futura ruta del asistente deberá utilizar este middleware.
 
-Queda pendiente confirmar con Marcos cómo se transporta el token
-y dónde queda disponible la identidad validada en la petición.
+Según el contrato del equipo, el JWT se enviará mediante:
+Authorization: Bearer <jwt>
 
 El asistente no aceptará userId ni walletId en el cuerpo.
 Cuando incorporemos datos financieros, el backend consultará
