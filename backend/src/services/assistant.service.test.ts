@@ -106,4 +106,29 @@ describe('getAssistantReply', () => {
         expect(mocks.constructor).not.toHaveBeenCalled()
         expect(mocks.generateContent).not.toHaveBeenCalled()
     })
+
+    it('identifica el tiempo de espera agotado', async () => {
+        const error = new Error('Detalle interno del SDK')
+        error.name = 'APIConnectionTimeoutError'
+
+        mocks.generateContent.mockRejectedValue(error)
+
+        await expect(getAssistantReply('Hola')).rejects.toMatchObject({
+            name: 'AssistantError',
+            code: 'TIMEOUT',
+            message:
+                'El asistente tardó demasiado en responder. Intenta nuevamente.',
+        })
+    })
+
+    it('no confunde una cancelación con un tiempo de espera agotado', async () => {
+        const error = new Error('Cancelación simulada')
+        error.name = 'APIUserAbortError'
+
+        mocks.generateContent.mockRejectedValue(error)
+
+        await expect(getAssistantReply('Hola')).rejects.toMatchObject({
+            code: 'PROVIDER_ERROR',
+        })
+    })
 })

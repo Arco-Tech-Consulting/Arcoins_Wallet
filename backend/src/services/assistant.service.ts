@@ -39,13 +39,22 @@ export async function getAssistantReply(value: unknown): Promise<string> {
         config: {
             systemInstruction: SYSTEM_INSTRUCTION,
         },
-    }).catch(() => {
+    }).catch((error: unknown) => {
+        if (
+            error instanceof Error &&
+            error.name === 'APIConnectionTimeoutError'
+        ) {
+            throw new AssistantError(
+                'TIMEOUT',
+                'El asistente tardó demasiado en responder. Intenta nuevamente.',
+            )
+        }
+
         throw new AssistantError(
             'PROVIDER_ERROR',
             'El asistente no está disponible. Intenta más tarde.',
         )
     })
-
     const reply = response.text?.trim()
 
     if (!reply) {
