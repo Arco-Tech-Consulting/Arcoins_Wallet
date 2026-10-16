@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
     generateContent: vi.fn(),
     constructor: vi.fn(),
+    getGeminiConfig: vi.fn(),
 }))
 
 vi.mock('@google/genai', () => ({
@@ -18,11 +19,7 @@ vi.mock('@google/genai', () => ({
 }))
 
 vi.mock('../config/gemini.config', () => ({
-    getGeminiConfig: () => ({
-        apiKey: 'clave-ficticia',
-        model: 'modelo-de-prueba',
-        timeoutMs: 15000,
-    }),
+    getGeminiConfig: mocks.getGeminiConfig,
 }))
 
 import { getAssistantReply } from './assistant.service'
@@ -30,6 +27,12 @@ import { getAssistantReply } from './assistant.service'
 describe('getAssistantReply', () => {
     beforeEach(() => {
         vi.resetAllMocks()
+
+        mocks.getGeminiConfig.mockReturnValue({
+            apiKey: 'clave-ficticia',
+            model: 'modelo-de-prueba',
+            timeoutMs: 15000,
+        })
     })
 
     it('envía el mensaje limpio y devuelve la respuesta limpia', async () => {
@@ -68,19 +71,39 @@ describe('getAssistantReply', () => {
         async (text) => {
             mocks.generateContent.mockResolvedValue({ text })
 
-            await expect(getAssistantReply('Hola')).rejects.toThrow(
-                'El asistente no devolvió una respuesta de texto.',
-            )
+            await expect(getAssistantReply('Hola')).rejects.toMatchObject({
+                name: 'AssistantError',
+                code: 'EMPTY_RESPONSE',
+                message: 'El asistente no devolvió una respuesta de texto.',
+            })
         },
     )
 
-    it('propaga un fallo del proveedor', async () => {
+    it('oculta el error interno del proveedor', async () => {
         mocks.generateContent.mockRejectedValue(
-            new Error('Fallo simulado del proveedor'),
+            new Error('Detalle interno que no debe llegar al usuario'),
         )
 
-        await expect(getAssistantReply('Hola')).rejects.toThrow(
-            'Fallo simulado del proveedor',
-        )
+        await expect(getAssistantReply('Hola')).rejects.toMatchObject({
+            name: 'AssistantError',
+            code: 'PROVIDER_ERROR',
+            message: 'El asistente no está disponible. Intenta más tarde.',
+        })
+    })
+
+    it('controla los errores de configuración sin llamar a Gemini', async () => {
+        mocks.getGeminiConfig.mockImplementationOnce(() => {
+            throw new Error('Detalle interno de configuración')
+        })
+
+        await expect(getAssistantReply('Hola')).rejects.toMatchObject({
+            name: 'AssistantError',
+            code: 'CONFIGURATION_ERROR',
+            message:
+                'El asistente no está disponible por un problema de configuración.',
+        })
+
+        expect(mocks.constructor).not.toHaveBeenCalled()
+        expect(mocks.generateContent).not.toHaveBeenCalled()
     })
 })

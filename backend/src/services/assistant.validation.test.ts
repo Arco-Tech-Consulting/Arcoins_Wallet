@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { validateAssistantMessage } from './assistant.validation'
+import { AssistantError } from './assistant.errors'
 
 describe('validateAssistantMessage', () => {
     it('elimina espacios de los extremos', () => {
@@ -41,5 +42,16 @@ describe('validateAssistantMessage', () => {
         const message = 'a'.repeat(2000)
 
         expect(validateAssistantMessage(`  ${message}  `)).toBe(message)
+    })
+
+    it('identifica el mensaje inválido con un error controlado', () => {
+        const validate = () => validateAssistantMessage('   ')
+
+        expect(validate).toThrow(AssistantError)
+        expect(validate).toThrow(
+            expect.objectContaining({
+                code: 'INVALID_MESSAGE',
+            }),
+        )
     })
 })

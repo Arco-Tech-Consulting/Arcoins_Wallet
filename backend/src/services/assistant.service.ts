@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai'
 import { getGeminiConfig } from '../config/gemini.config'
 import { validateAssistantMessage } from './assistant.validation'
+import { AssistantError } from './assistant.errors'
 
 const SYSTEM_INSTRUCTION = `
 Eres el asistente educativo de Arcoins Wallet.
@@ -14,7 +15,16 @@ No solicites contraseñas, tokens ni claves.
 
 export async function getAssistantReply(value: unknown): Promise<string> {
     const message = validateAssistantMessage(value)
-    const config = getGeminiConfig()
+    let config: ReturnType<typeof getGeminiConfig>
+
+    try {
+        config = getGeminiConfig()
+    } catch {
+        throw new AssistantError(
+            'CONFIGURATION_ERROR',
+            'El asistente no está disponible por un problema de configuración.',
+        )
+    }
 
     const client = new GoogleGenAI({
         apiKey: config.apiKey,
@@ -29,12 +39,20 @@ export async function getAssistantReply(value: unknown): Promise<string> {
         config: {
             systemInstruction: SYSTEM_INSTRUCTION,
         },
+    }).catch(() => {
+        throw new AssistantError(
+            'PROVIDER_ERROR',
+            'El asistente no está disponible. Intenta más tarde.',
+        )
     })
 
     const reply = response.text?.trim()
 
     if (!reply) {
-        throw new Error('El asistente no devolvió una respuesta de texto.')
+        throw new AssistantError(
+            'EMPTY_RESPONSE',
+            'El asistente no devolvió una respuesta de texto.',
+        )
     }
 
     return reply
