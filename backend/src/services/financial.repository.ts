@@ -1,4 +1,6 @@
+import { off } from "cluster";
 import { pool } from "../config/db";
+import { PoolClient } from "pg";  //Esto nos permitirá tipar correctamente una conexión individual a PostgreSQL.
 
 export class FinancialRepository {
   /**
@@ -15,41 +17,23 @@ export class FinancialRepository {
   }
 
   /**
-   * Registra una nueva transacción en la base de datos alineada con el esquema de Marcos.
+   * Obtiene la billetera asociada a un usuarioque ya este autenticado.
    */
-  public async createTransaction(req: Request, res: Response): Promise<void> {
-    try {
-      const { type, fromCurrency, toCurrency, fromAmount } = req.body;
-      const userId = 'a0000000-0000-0000-0000-000000000001';
+  public async getWalletByUserId(userId: string) {
+    const query = `
+    SELECT id, user_id, created_at
+    FROM wallets
+    WHERE user_id = $1
+    LIMIT 1;
+  `;
 
-      if (!['buy', 'sell', 'exchange'].includes(type)) {
-        res.status(400).json({ success: false, error: 'Tipo de transacción inválido' });
-        return;
-      }
+    const result = await pool.query(query, [userId]);
 
-      // Calcular la tasa según las monedas
-      let rateUsed = 0.00025; // COP -> USD
-      if (fromCurrency === 'USD' && toCurrency === 'COP') rateUsed = 4000;
-      if (fromCurrency === 'EUR' && toCurrency === 'COP') rateUsed = 4400;
-      if (fromCurrency === 'USD' && toCurrency === 'EUR') rateUsed = 0.909;
-
-      const toAmount = fromAmount * rateUsed;
-
-      const transaction = await financialRepository.createExchangeTransaction({
-        user_id: userId,
-        type,
-        from_currency: fromCurrency,
-        to_currency: toCurrency,
-        from_amount: fromAmount,
-        to_amount: toAmount,
-        rate_used: rateUsed,
-        description: `${type.toUpperCase()} de ${fromCurrency} a ${toCurrency}`
-      });
-
-      res.status(201).json({ transaction });
-    } catch (error: any) {
-      res.status(400).json({ success: false, error: error.message });
+    if (result.rows.length === 0) {
+      return null;
     }
+
+    return result.rows[0];
   }
 
   public async getWalletBalances(walletId: string) {
@@ -86,56 +70,75 @@ export class FinancialRepository {
   }
 
   public async getTransactions(
-    walletId: string,
+    userId: string,
     filters: { type?: string; currency?: string; page?: string }
   ) {
-    const page = parseInt(filters.page || "1", 10);
+    const page = Number(filters.page || 1);
+
+    if (!Number.isInteger(page) || page < 1) {
+      throw new Error("Número de página inválido");
+    }
+
     const limit = 10;
     const offset = (page - 1) * limit;
 
-    // Consulta base para transacciones de la wallet / usuario de prueba (Ana)
-    let query = `
-  SELECT id, type, status, from_currency, to_currency, from_amount, to_amount, 
-         rate_used, rate_timestamp, description, created_at 
-  FROM transactions 
-  WHERE user_id = 'a0000000-0000-0000-0000-000000000001'
-  `;
-
-    const queryParams: any[] = [];
+    const conditions = ["user_id = $1"];
+    const queryParams: unknown[] = [userId];
 
     if (filters.type) {
       queryParams.push(filters.type);
-      query += `AND type = $${queryParams.length}`;
+      conditions.push(`type = $${queryParams.length}`);
     }
 
-    query += `ORDER BY  created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+    if (filters.currency) {
+      queryParams.push(filters.currency.toUpperCase());
+      const position = queryParams.length;
 
-    const result = await pool.query(query, queryParams);
+      conditions.push(
+        `(from_currency = $${position} OR to_currency = $${position})`
+      );
+    }
 
-    //Consulta para el total (Para la paginacion del contrato)
-    const countResult = await pool.query(`
-    SELECT COUNT(*) FROM transactions 
-    WHERE user_id = 'a0000000-0000-0000-0000-000000000001'
-  `);
-    const total = parseInt(countResult.rows[0].count, 10 );
+    const whereClause = conditions.join(" AND ");
 
-    const transactionsFormatted = result.rows.map((row: any) => ({
+    const query = `
+      SELECT  id, type, status, from_currency, to_currency,
+              from_amount, to_amount, rate_used, rate_timestamp,
+              description, created_at
+      FROM transactions
+      WHERE ${whereClause}
+      ORDER BY created_at DESC, id DESC
+      LIMIT $${queryParams.length + 1}
+      OFFSET $${queryParams.length + 2}
+      `;
+
+    const result = await pool.query(query, [...queryParams, limit, offset]);
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM transactions WHERE ${whereClause}`,
+      queryParams
+    );
+
+    const total = Number(countResult.rows[0].count);
+
+    const transactionsFormatted = result.rows.map((row) => ({
       id: row.id,
       type: row.type,
-      status: row.status || 'completed',
+      status: row.status,
       fromCurrency: row.from_currency,
       toCurrency: row.to_currency,
-      fromAmount: row.from_amount ? parseFloat(row.from_amount) : null,
-      toAmount: row.to_amount ? parseFloat(row.to_amount) : null,
-      rateUsed: row.rate_used ? parseFloat(row.rate_used) : null,
+      fromAmount: row.from_amount !== null ? Number(row.from_amount) : null,
+      toAmount: row.to_amount !== null ? Number(row.to_amount) : null,
+      rateUsed: row.rate_used !== null ? Number(row.rate_used) : null,
       rateTimestamp: row.rate_timestamp,
       description: row.description,
-      createdAt: row.created_at
+      createdAt: row.created_at,
     }));
 
     return {
       data: transactionsFormatted,
-      page, total
+      page,
+      total,
     };
   }
 
@@ -155,22 +158,22 @@ export class FinancialRepository {
   }) {
     const query = `
       INSERT INTO transactions (
-        user_id, 
-        type, 
-        from_currency, 
-        to_currency, 
-        from_amount, 
-        to_amount, 
-        rate_used, 
+        user_id,
+        type,
+        from_currency,
+        to_currency,
+        from_amount,
+        to_amount,
+        rate_used,
         rate_timestamp,
-        description, 
-        status, 
+        description,
+        status,
         created_at
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, 'completed', NOW())
       RETURNING id, type, status, from_currency, to_currency, from_amount, to_amount, rate_used, rate_timestamp, description, created_at;
     `;
-    
+
     const values = [
       data.user_id,
       data.type,
@@ -179,7 +182,7 @@ export class FinancialRepository {
       data.from_amount || null,
       data.to_amount || null,
       data.rate_used && data.rate_used > 0 ? data.rate_used : 0.00025,
-      data.description || null
+      data.description || null,
     ];
 
     const result = await pool.query(query, values);
@@ -196,12 +199,12 @@ export class FinancialRepository {
       rateUsed: row.rate_used ? parseFloat(row.rate_used) : null,
       rateTimestamp: row.rate_timestamp,
       description: row.description,
-      createdAt: row.created_at
+      createdAt: row.created_at,
     };
   }
 
   /**
-   * Aqui creamos un pago al comercio 
+   * Aqui creamos un pago al comercio
    */
   public async createPayment(data: {
     user_id: string;
@@ -221,7 +224,7 @@ export class FinancialRepository {
       data.currency,
       data.amount,
       data.merchantId,
-      data.description || 'Pago a comercio'
+      data.description || "Pago a comercio",
     ];
 
     const result = await pool.query(query, values);
@@ -235,7 +238,37 @@ export class FinancialRepository {
       fromAmount: parseFloat(row.from_amount),
       merchantId: row.merchant_id,
       description: row.description,
-      createdAt: row.created_at
+      createdAt: row.created_at,
     };
+  }
+
+  /**
+ * Ejecuta una operación dentro de una transacción SQL.
+ * Si ocurre un error, revierte todos los cambios.
+ */
+
+  public async executeInTransaction<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
+
+    const client = await pool.connect(); //con pool.connect() Obtenemos una conexion exclusiva del pool.
+
+    try {
+      await client.query('BEGIN'); //con BEGIN iniciamos la transaccion
+
+      const result = await operation(client); //Con operation(client) ejecutamos consultas usando misma conexion.
+
+      await client.query('COMMIT'); //Con COMMIT confirmamos los cambios cuando todo termina correctamente.
+
+      return result
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK'); //ROLLBACK nos revierte cambios en caso de error.
+      } catch (rollbackError) {
+        console.error('Error al revertir la transacción:', rollbackError);
+      }
+
+      throw error;
+    } finally {
+      client.release(); //client.release() devuelve la conexion al pool, incluso al fallar la operacion.
+    }
   }
 }
