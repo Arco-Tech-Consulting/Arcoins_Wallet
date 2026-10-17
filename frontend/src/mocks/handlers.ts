@@ -323,6 +323,6 @@ export const handlers = [
     const unauthorized = requireAuth(request)
     if (unauthorized) return unauthorized
     await delay(200)
-    return HttpResponse.json({ success: true, data: merchants })
+    return HttpResponse.json({ data: merchants })
   }),
 ]
