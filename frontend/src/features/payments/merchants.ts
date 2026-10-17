@@ -1,13 +1,12 @@
 import type { Merchant } from '@/types/api'
 
 /**
- * Comercios disponibles para pagar.
+ * Respaldo local de comercios (mismos IDs del seed del backend).
  *
- * Temporalmente se definen aquí con los mismos IDs del seed del backend
- * (backend/src/db/seed.sql) porque el backend aún no expone GET /api/merchants.
- * Cuando exista ese endpoint, reemplazar esto por una llamada a la API.
+ * La fuente de verdad es `GET /api/merchants`; esta lista solo se usa si la
+ * petición falla (por ejemplo, antes de desplegar el endpoint en el backend).
  */
-export const MERCHANTS: Merchant[] = [
+export const FALLBACK_MERCHANTS: Merchant[] = [
   {
     id: 'c0000000-0000-0000-0000-000000000001',
     name: 'Café Andino',

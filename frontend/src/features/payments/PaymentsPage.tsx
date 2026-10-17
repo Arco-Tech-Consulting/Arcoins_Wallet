@@ -8,13 +8,11 @@ import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import { CURRENCY_META, formatSymbolAmount } from '@/lib/formatters'
 import { CURRENCIES, type CurrencyCode } from '@/types/api'
-import { useCreatePayment } from './hooks'
-import { MERCHANTS } from './merchants'
-
-const CATEGORIES = Array.from(new Set(MERCHANTS.map((m) => m.category)))
+import { useCreatePayment, useMerchants } from './hooks'
+import { FALLBACK_MERCHANTS } from './merchants'
 
 export default function PaymentsPage() {
-  const [merchantId, setMerchantId] = useState(MERCHANTS[0]?.id ?? '')
+  const [merchantId, setMerchantId] = useState('')
   const [currency, setCurrency] = useState<CurrencyCode>('COP')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -23,10 +21,15 @@ export default function PaymentsPage() {
     queryKey: ['balances'],
     queryFn: getBalances,
   })
+  const merchantsQuery = useMerchants()
   const createPayment = useCreatePayment()
 
+  const merchants = merchantsQuery.data ?? FALLBACK_MERCHANTS
+  const categories = Array.from(new Set(merchants.map((m) => m.category)))
+  const selectedMerchantId = merchantId || merchants[0]?.id || ''
+  const merchant = merchants.find((m) => m.id === selectedMerchantId)
+
   const numericAmount = Number(amount)
-  const merchant = MERCHANTS.find((m) => m.id === merchantId)
   const balancesReady = balancesQuery.isSuccess
   const currentBalance =
     balancesQuery.data?.find((balance) => balance.currency === currency)
@@ -34,12 +37,15 @@ export default function PaymentsPage() {
   const insufficient = balancesReady && numericAmount > currentBalance
   const canSubmit =
     numericAmount > 0 &&
-    Boolean(merchantId) &&
+    Boolean(selectedMerchantId) &&
     balancesReady &&
     !insufficient &&
     !createPayment.isPending
 
-  const newBalance = Math.max(0, currentBalance - (numericAmount > 0 ? numericAmount : 0))
+  const newBalance = Math.max(
+    0,
+    currentBalance - (numericAmount > 0 ? numericAmount : 0),
+  )
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -49,7 +55,7 @@ export default function PaymentsPage() {
       {
         currency,
         amount: numericAmount,
-        merchantId,
+        merchantId: selectedMerchantId,
         description: description.trim() || undefined,
       },
       {
@@ -74,16 +80,26 @@ export default function PaymentsPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Select
             label="Comercio"
-            value={merchantId}
+            value={selectedMerchantId}
             onChange={(event) => setMerchantId(event.target.value)}
+            disabled={merchantsQuery.isLoading}
           >
-            {CATEGORIES.map((category) => (
+            {merchants.length === 0 ? (
+              <option value="">
+                {merchantsQuery.isLoading
+                  ? 'Cargando comercios…'
+                  : 'Sin comercios disponibles'}
+              </option>
+            ) : null}
+            {categories.map((category) => (
               <optgroup key={category} label={category}>
-                {MERCHANTS.filter((m) => m.category === category).map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
+                {merchants
+                  .filter((m) => m.category === category)
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
               </optgroup>
             ))}
           </Select>
@@ -177,7 +193,8 @@ export default function PaymentsPage() {
           {createPayment.isSuccess && createPayment.data ? (
             <p className="rounded-lg bg-secondary-container/20 px-3 py-2 text-sm text-secondary">
               Pago realizado a {merchant?.name ?? 'el comercio'}
-              {createPayment.data.fromCurrency && createPayment.data.fromAmount != null
+              {createPayment.data.fromCurrency &&
+              createPayment.data.fromAmount != null
                 ? ` por ${formatSymbolAmount(
                     createPayment.data.fromAmount,
                     createPayment.data.fromCurrency,
@@ -186,7 +203,11 @@ export default function PaymentsPage() {
             </p>
           ) : null}
 
-          <Button type="submit" loading={createPayment.isPending} disabled={!canSubmit}>
+          <Button
+            type="submit"
+            loading={createPayment.isPending}
+            disabled={!canSubmit}
+          >
             Pagar
           </Button>
         </form>

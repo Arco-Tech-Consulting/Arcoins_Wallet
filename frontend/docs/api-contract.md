@@ -103,6 +103,15 @@ Query params opcionales: `type`, `currency`, `from` (fecha), `to` (fecha), `page
 { "transaction": { /* Transaction */ } }
 ```
 
+## Comercios
+
+### GET /api/merchants
+
+```json
+// res — solo comercios activos
+{ "data": [ { "id": "c0000000-0000-0000-0000-000000000001", "name": "Café Andino", "category": "Restaurantes" } ] }
+```
+
 ## Chat IA
 
 ### POST /api/chat
