@@ -10,6 +10,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard' },
   { to: '/operations', label: 'Operaciones' },
+  { to: '/deposit', label: 'Depósito' },
   { to: '/history', label: 'Historial' },
   { to: '/chat', label: 'Asistente' },
   { to: '/budget', label: 'Presupuesto' },

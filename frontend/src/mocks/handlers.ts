@@ -231,6 +231,43 @@ export const handlers = [
     return HttpResponse.json({ success: true, transaction })
   }),
 
+  http.post<never, { to_currency: CurrencyCode; to_amount: number; description?: string }>(
+    '/api/deposit',
+    async ({ request }) => {
+      const unauthorized = requireAuth(request)
+      if (unauthorized) return unauthorized
+      await delay(300)
+      const body = await request.json()
+
+      if (!body.to_currency || !body.to_amount || body.to_amount <= 0) {
+        return HttpResponse.json(
+          { success: false, error: 'Un depósito requiere moneda y monto de destino.' },
+          { status: 400 },
+        )
+      }
+
+      const existing = balances.find((b) => b.currency === body.to_currency)
+      if (existing) {
+        existing.amount += body.to_amount
+      } else {
+        balances.push({ currency: body.to_currency, amount: body.to_amount })
+      }
+
+      const transaction: Transaction = {
+        id: `tx_${Date.now()}`,
+        type: 'deposit',
+        status: 'completed',
+        toCurrency: body.to_currency,
+        toAmount: body.to_amount,
+        description: body.description ?? 'Depósito en saldo',
+        createdAt: new Date().toISOString(),
+      }
+      transactions.unshift(transaction)
+
+      return HttpResponse.json({ success: true, transaction }, { status: 201 })
+    },
+  ),
+
   // ---------- Chat ----------
   http.post<never, { message: string }>('/api/chat', async ({ request }) => {
     const unauthorized = requireAuth(request)
