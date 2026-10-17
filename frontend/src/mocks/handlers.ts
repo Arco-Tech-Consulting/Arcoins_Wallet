@@ -45,9 +45,26 @@ const rates: Record<string, number> = {
 }
 
 const merchants = [
-  { id: 'mer_001', name: 'Hotel El Dorado', category: 'Alojamiento' },
-  { id: 'mer_002', name: 'Restaurante La Fogata', category: 'Comida' },
-  { id: 'mer_003', name: 'Transmetro', category: 'Transporte' },
+  {
+    id: 'c0000000-0000-0000-0000-000000000001',
+    name: 'Café Andino',
+    category: 'Restaurantes',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000002',
+    name: 'Supermercado Central',
+    category: 'Supermercado',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000003',
+    name: 'Hotel Sol del Caribe',
+    category: 'Hospedaje',
+  },
+  {
+    id: 'c0000000-0000-0000-0000-000000000004',
+    name: 'Aerolínea Cielo Azul',
+    category: 'Transporte',
+  },
 ]
 
 const transactions: Transaction[] = [
@@ -219,6 +236,26 @@ export const handlers = [
     await delay(300)
     const body = await request.json()
     const merchant = merchants.find((m) => m.id === body.merchantId)
+
+    if (!body.currency || !body.amount || !body.merchantId) {
+      return HttpResponse.json(
+        { success: false, error: 'Faltan campos obligatorios para el pago.' },
+        { status: 400 },
+      )
+    }
+
+    const balance = balances.find((b) => b.currency === body.currency)
+    if (!balance || balance.amount < body.amount) {
+      return HttpResponse.json(
+        {
+          success: false,
+          error: 'Fondos insuficientes para completar la transacción.',
+        },
+        { status: 400 },
+      )
+    }
+    balance.amount -= body.amount
+
     const transaction: Transaction = {
       id: `tx_${Date.now()}`,
       type: 'payment',
@@ -228,6 +265,7 @@ export const handlers = [
       description: body.description ?? merchant?.name ?? 'Pago registrado',
       createdAt: new Date().toISOString(),
     }
+    transactions.unshift(transaction)
     return HttpResponse.json({ success: true, transaction })
   }),
 
