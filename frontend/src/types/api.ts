@@ -82,6 +82,12 @@ export interface CreateTransactionRequest {
   fromAmount: number
 }
 
+export interface CreateDepositRequest {
+  toCurrency: CurrencyCode
+  toAmount: number
+  description?: string
+}
+
 export interface CreatePaymentRequest {
   currency: CurrencyCode
   amount: number

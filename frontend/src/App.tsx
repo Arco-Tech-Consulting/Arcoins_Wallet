@@ -7,6 +7,8 @@ import RegisterPage from '@/features/auth/RegisterPage'
 import DashboardPage from '@/features/dashboard/DashboardPage'
 import OperationsPage from '@/features/transactions/OperationsPage'
 import HistoryPage from '@/features/transactions/HistoryPage'
+import DepositPage from '@/features/deposit/DepositPage'
+import PaymentsPage from '@/features/payments/PaymentsPage'
 import ChatPage from '@/features/chat/ChatPage'
 import BudgetPage from '@/features/budget/BudgetPage'
 
@@ -27,6 +29,8 @@ export default function App() {
       >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/operations" element={<OperationsPage />} />
+        <Route path="/deposit" element={<DepositPage />} />
+        <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/budget" element={<BudgetPage />} />
