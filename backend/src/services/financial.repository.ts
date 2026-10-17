@@ -71,7 +71,7 @@ export class FinancialRepository {
 
   public async getTransactions(
     userId: string,
-    filters: { type?: string; currency?: string; page?: string }
+    filters: { type?: string; currency?: string; from?: string; to?: string; page?: string }
   ) {
     const page = Number(filters.page || 1);
 
@@ -99,6 +99,18 @@ export class FinancialRepository {
       );
     }
 
+    if (filters.from) {
+      queryParams.push(filters.from);
+      conditions.push(`created_at >= $${queryParams.length}::date`);
+    }
+
+    if (filters.to) {
+      queryParams.push(filters.to);
+      conditions.push(
+        `created_at < ($${queryParams.length}::date + INTERVAL '1 day')`
+      );
+    }
+
     const whereClause = conditions.join(" AND ");
 
     const query = `
@@ -121,7 +133,171 @@ export class FinancialRepository {
 
     const total = Number(countResult.rows[0].count);
 
-    const transactionsFormatted = result.rows.map((row) => ({
+    const transactionsFormatted = result.rows.map((row) =>
+      this.formatTransactionRow(row)
+    );
+
+    return {
+      data: transactionsFormatted,
+      page,
+      total,
+    };
+  }
+
+  /**
+   * Aplica una transaccion sobre la billetera del usuario de forma atomica:
+   * valida y descuenta el saldo de origen, acredita el de destino e inserta
+   * el movimiento. Todo dentro de una unica transaccion SQL (rollback ante error).
+   */
+  public async applyTransaction(data: {
+    user_id: string;
+    type: string;
+    from_currency?: string | null;
+    to_currency?: string | null;
+    from_amount?: number | null;
+    to_amount?: number | null;
+    rate_used?: number | null;
+    rate_timestamp?: Date | null;
+    merchant_id?: string | null;
+    description?: string | null;
+  }) {
+    const wallet = await this.getWalletByUserId(data.user_id);
+
+    if (!wallet) {
+      throw new Error('Billetera no encontrada');
+    }
+
+    return this.executeInTransaction(async (client) => {
+      if (data.from_currency && data.from_amount && data.from_amount > 0) {
+        const currentBalance = await this.getBalanceForUpdate(
+          client,
+          wallet.id,
+          data.from_currency
+        );
+
+        if (currentBalance < data.from_amount) {
+          throw new Error('Fondos insuficientes para completar la transacción.');
+        }
+
+        await this.adjustBalance(
+          client,
+          wallet.id,
+          data.from_currency,
+          -data.from_amount
+        );
+      }
+
+      if (data.to_currency && data.to_amount && data.to_amount > 0) {
+        await this.adjustBalance(
+          client,
+          wallet.id,
+          data.to_currency,
+          data.to_amount
+        );
+      }
+
+      return this.insertTransaction(client, data);
+    });
+  }
+
+  /**
+   * Lee el saldo de una moneda bloqueando la fila (FOR UPDATE) dentro
+   * de la transaccion SQL en curso.
+   */
+  private async getBalanceForUpdate(
+    client: PoolClient,
+    walletId: string,
+    currency: string
+  ): Promise<number> {
+    const query = `
+      SELECT amount FROM wallet_balances
+      WHERE wallet_id = $1 AND currency = $2
+      FOR UPDATE;
+    `;
+    const result = await client.query(query, [walletId, currency]);
+    return result.rows.length > 0 ? parseFloat(result.rows[0].amount) : 0;
+  }
+
+  /**
+   * Suma o resta un monto al saldo de una moneda (upsert por si no existiera).
+   */
+  private async adjustBalance(
+    client: PoolClient,
+    walletId: string,
+    currency: string,
+    delta: number
+  ): Promise<void> {
+    const query = `
+      INSERT INTO wallet_balances (wallet_id, currency, amount, updated_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (wallet_id, currency)
+      DO UPDATE SET amount = wallet_balances.amount + EXCLUDED.amount, updated_at = NOW();
+    `;
+    await client.query(query, [walletId, currency, delta]);
+  }
+
+  /**
+   * Inserta el movimiento respetando los constraints de cada tipo
+   * (los depositos no llevan tasa; las conversiones si).
+   */
+  private async insertTransaction(
+    client: PoolClient,
+    data: {
+      user_id: string;
+      type: string;
+      from_currency?: string | null;
+      to_currency?: string | null;
+      from_amount?: number | null;
+      to_amount?: number | null;
+      rate_used?: number | null;
+      rate_timestamp?: Date | null;
+      merchant_id?: string | null;
+      description?: string | null;
+    }
+  ) {
+    const isConversion = ['buy', 'sell', 'exchange'].includes(data.type);
+
+    const query = `
+      INSERT INTO transactions (
+        user_id,
+        type,
+        from_currency,
+        to_currency,
+        from_amount,
+        to_amount,
+        rate_used,
+        rate_timestamp,
+        merchant_id,
+        description,
+        status,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'completed', NOW())
+      RETURNING id, type, status, from_currency, to_currency, from_amount, to_amount, rate_used, rate_timestamp, description, created_at;
+    `;
+
+    const values = [
+      data.user_id,
+      data.type,
+      data.from_currency || null,
+      data.to_currency || null,
+      data.from_amount || null,
+      data.to_amount || null,
+      isConversion ? data.rate_used || null : null,
+      isConversion ? data.rate_timestamp || new Date() : null,
+      data.merchant_id || null,
+      data.description || null,
+    ];
+
+    const result = await client.query(query, values);
+    return this.formatTransactionRow(result.rows[0]);
+  }
+
+  /**
+   * Mapea una fila de `transactions` al formato del contrato del frontend.
+   */
+  private formatTransactionRow(row: any) {
+    return {
       id: row.id,
       type: row.type,
       status: row.status,
@@ -133,17 +309,12 @@ export class FinancialRepository {
       rateTimestamp: row.rate_timestamp,
       description: row.description,
       createdAt: row.created_at,
-    }));
-
-    return {
-      data: transactionsFormatted,
-      page,
-      total,
     };
   }
 
   /**
    * Aqui se crea una transaccion general como buy, sell, exchange, deposit, etc
+   * aplicando tambien el movimiento de saldos.
    */
 
   public async createExchangeTransaction(data: {
@@ -156,55 +327,11 @@ export class FinancialRepository {
     rate_used?: number;
     description?: string;
   }) {
-    const query = `
-      INSERT INTO transactions (
-        user_id,
-        type,
-        from_currency,
-        to_currency,
-        from_amount,
-        to_amount,
-        rate_used,
-        rate_timestamp,
-        description,
-        status,
-        created_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, 'completed', NOW())
-      RETURNING id, type, status, from_currency, to_currency, from_amount, to_amount, rate_used, rate_timestamp, description, created_at;
-    `;
-
-    const values = [
-      data.user_id,
-      data.type,
-      data.from_currency || null,
-      data.to_currency || null,
-      data.from_amount || null,
-      data.to_amount || null,
-      data.rate_used && data.rate_used > 0 ? data.rate_used : 0.00025,
-      data.description || null,
-    ];
-
-    const result = await pool.query(query, values);
-    const row = result.rows[0];
-
-    return {
-      id: row.id,
-      type: row.type,
-      status: row.status,
-      fromCurrency: row.from_currency,
-      toCurrency: row.to_currency,
-      fromAmount: row.from_amount ? parseFloat(row.from_amount) : null,
-      toAmount: row.to_amount ? parseFloat(row.to_amount) : null,
-      rateUsed: row.rate_used ? parseFloat(row.rate_used) : null,
-      rateTimestamp: row.rate_timestamp,
-      description: row.description,
-      createdAt: row.created_at,
-    };
+    return this.applyTransaction(data);
   }
 
   /**
-   * Aqui creamos un pago al comercio
+   * Crea un pago a comercio descontando el saldo de la moneda indicada.
    */
   public async createPayment(data: {
     user_id: string;
@@ -213,33 +340,14 @@ export class FinancialRepository {
     merchantId: string;
     description?: string;
   }) {
-    const query = `
-      INSERT INTO transactions (user_id, type, from_currency, from_amount, merchant_id, description, status, created_at)
-      VALUES ($1, 'payment', $2, $3, $4, $5, 'completed', NOW())
-      RETURNING id, type, status, from_currency, from_amount, merchant_id, description, created_at;
-    `;
-
-    const values = [
-      data.user_id,
-      data.currency,
-      data.amount,
-      data.merchantId,
-      data.description || "Pago a comercio",
-    ];
-
-    const result = await pool.query(query, values);
-    const row = result.rows[0];
-
-    return {
-      id: row.id,
-      type: row.type,
-      status: row.status,
-      fromCurrency: row.from_currency,
-      fromAmount: parseFloat(row.from_amount),
-      merchantId: row.merchant_id,
-      description: row.description,
-      createdAt: row.created_at,
-    };
+    return this.applyTransaction({
+      user_id: data.user_id,
+      type: 'payment',
+      from_currency: data.currency,
+      from_amount: data.amount,
+      merchant_id: data.merchantId,
+      description: data.description || 'Pago a comercio',
+    });
   }
 
   /**
