@@ -109,6 +109,8 @@ describe('FinancialRepository.applyTransaction', () => {
     expect(updates).toHaveLength(2);
     expect(updates[0][1]).toEqual(['wallet-1', 'COP', -100000]);
     expect(updates[1][1]).toEqual(['wallet-1', 'USD', 31.4]);
+    // El valor provisional del INSERT no puede ser negativo (CHECK antes del ON CONFLICT).
+    expect(String(updates[0][0])).toContain('GREATEST');
   });
 
   it('rechaza con fondos insuficientes y hace rollback', async () => {

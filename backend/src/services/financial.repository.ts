@@ -227,11 +227,15 @@ export class FinancialRepository {
     currency: string,
     delta: number
   ): Promise<void> {
+    // PostgreSQL evalúa el CHECK "amount >= 0" sobre la fila propuesta del
+    // INSERT ANTES de resolver el ON CONFLICT. Por eso el valor provisional
+    // nunca puede ser negativo: se inserta GREATEST($3, 0) y el descuento real
+    // (delta negativo) se aplica unicamente en el DO UPDATE.
     const query = `
       INSERT INTO wallet_balances (wallet_id, currency, amount, updated_at)
-      VALUES ($1, $2, $3, NOW())
+      VALUES ($1, $2, GREATEST($3::numeric, 0), NOW())
       ON CONFLICT (wallet_id, currency)
-      DO UPDATE SET amount = wallet_balances.amount + EXCLUDED.amount, updated_at = NOW();
+      DO UPDATE SET amount = wallet_balances.amount + $3::numeric, updated_at = NOW();
     `;
     await client.query(query, [walletId, currency, delta]);
   }
