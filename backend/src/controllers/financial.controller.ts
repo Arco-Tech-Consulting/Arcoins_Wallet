@@ -206,11 +206,13 @@ public async getRates(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const { type, currency, page } = req.query;
+      const { type, currency, from, to, page } = req.query;
 
       const result = await financialRepository.getTransactions(userId, {
         type: typeof type === 'string' ? type : undefined,
         currency: typeof currency === 'string' ? currency : undefined,
+        from: typeof from === 'string' ? from : undefined,
+        to: typeof to === 'string' ? to : undefined,
         page: typeof page === 'string' ? page : undefined
       });
 
@@ -231,7 +233,6 @@ public async getRates(req: Request, res: Response): Promise<void> {
     try {
       const { type, fromCurrency, toCurrency, fromAmount } = req.body;
 
-      // ID de usuario de prueba por defecto (Ana Gómez)
       const userId = req.user?.id;
 
       if (!userId) {
@@ -242,7 +243,6 @@ public async getRates(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      // Validaciones básicas de negocio
       if (!["buy", "sell", "exchange"].includes(type)) {
         res
           .status(400)
@@ -250,17 +250,27 @@ public async getRates(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      //Calculo simulado o tasa base de ejemplo para la conversion de toAmount
-      const rateUsed =
-        fromCurrency === "COP" && toCurrency === "USD" ? 0.00025 : 4000;
-      const toAmount = fromAmount * rateUsed;
+      const amount = Number(fromAmount);
+
+      // Tasa real: primero la API externa, con respaldo en PostgreSQL.
+      const rateUsed = await this.resolveRate(fromCurrency, toCurrency);
+
+      const toAmount = financialService.calculateExchange(amount, rateUsed);
+
+      financialService.validateTransactionPayload(type, {
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        from_amount: amount,
+        to_amount: toAmount,
+        rate_used: rateUsed,
+      });
 
       const transaction = await financialRepository.createExchangeTransaction({
         user_id: userId,
         type,
         from_currency: fromCurrency,
         to_currency: toCurrency,
-        from_amount: fromAmount,
+        from_amount: amount,
         to_amount: toAmount,
         rate_used: rateUsed,
         description: `${type.toUpperCase()} de ${fromCurrency} a ${toCurrency}`,
@@ -270,6 +280,39 @@ public async getRates(req: Request, res: Response): Promise<void> {
     } catch (error: any) {
       res.status(400).json({ success: false, error: error.message });
     }
+  }
+
+  /**
+   * Obtiene la tasa de cambio para una conversión: primero la API externa,
+   * y como respaldo la última tasa almacenada en PostgreSQL.
+   */
+  private async resolveRate(
+    fromCurrency: string,
+    toCurrency: string
+  ): Promise<number> {
+    try {
+      const liveRate = await exchangeRateService.getExchangeRate(
+        fromCurrency,
+        toCurrency
+      );
+      return liveRate.rate;
+    } catch (apiError) {
+      console.warn(
+        "ExchangeRate-API no disponible. Usando tasa almacenada.",
+        apiError
+      );
+    }
+
+    const storedRate = await financialRepository.getExchangeRate(
+      fromCurrency,
+      toCurrency
+    );
+
+    if (!storedRate || storedRate.rate <= 0) {
+      throw new Error("No hay tasas de cambio disponibles");
+    }
+
+    return storedRate.rate;
   }
 
   /**
