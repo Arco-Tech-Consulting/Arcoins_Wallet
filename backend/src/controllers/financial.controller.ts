@@ -48,9 +48,15 @@ export class FinancialController {
   /**Procesa un deposito en la cuenta
    *POST /api/financial/deposit
    */
-  public async deposit(req: Request, res: Response): Promise<void> {
+  public async deposit(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { user_id, to_currency, to_amount, description } = req.body;
+      const { to_currency, to_amount, description } = req.body;
+      const userId = req.user?.id || req.body.user_id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, error: "Usuario no autenticado" });
+        return;
+      }
 
       // Valida payload con la logica del negocio.
       financialService.validateTransactionPayload("deposit", {
@@ -60,7 +66,7 @@ export class FinancialController {
 
       //Crea la transaccion en la DB
       const transaction = await financialRepository.createExchangeTransaction({
-        user_id,
+        user_id: userId,
         type: "deposit",
         to_currency,
         to_amount,
@@ -126,7 +132,7 @@ export class FinancialController {
         return;
       }
 
-      res.status(200).json({ id: wallet.Id });
+      res.status(200).json({ id: wallet.id });
     } catch (error: any) {
       res.status(500).json({ success: false, error: 'Error al consultar la billetera'});
     }
@@ -210,7 +216,7 @@ public async getRates(req: Request, res: Response): Promise<void> {
 
       res.status(200).json({ data: result });
     } catch (error: any) {
-      res.status(400).json({ succes: false, error: error.message });
+      res.status(400).json({ success: false, error: error.message });
     }
   }
 
@@ -262,7 +268,7 @@ public async getRates(req: Request, res: Response): Promise<void> {
 
       res.status(200).json({ transaction });
     } catch (error: any) {
-      res.status(400).json({ success: false, erro: error.message });
+      res.status(400).json({ success: false, error: error.message });
     }
   }
 
