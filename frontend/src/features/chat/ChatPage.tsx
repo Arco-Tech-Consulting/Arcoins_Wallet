@@ -2,6 +2,8 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useRef, useState } from 'react'
+import { sendChatMessage } from '@/api/chat.api'
+import { ApiError } from '@/api/client'
 
 
 type ChatMessage = {
@@ -13,7 +15,6 @@ type ChatMessage = {
 export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [failedMessage, setFailedMessage] = useState<string | null>(null)
-  const [simulateError, setSimulateError] = useState(false)
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const requestInFlight = useRef(false)
@@ -21,7 +22,7 @@ export default function ChatPage() {
     {
       id: 'welcome',
       role: 'assistant',
-      text: '¡Hola! Este es un chat de demostración. No tengo acceso a tus saldos ni movimientos.',
+      text: '¡Hola! Puedo orientarte sobre ahorro y organización de gastos. No tengo acceso a tus saldos ni movimientos.',
     },
   ])
 
@@ -50,14 +51,10 @@ export default function ChatPage() {
         setMessage('')
       }
 
-      // Demora simulada: no llama al backend ni a Gemini.
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 1000)
-      })
+      const response = await sendChatMessage({ message: text })
 
-      if (simulateError) {
-        setSimulateError(false)
-        throw new Error('Fallo simulado')
+      if (typeof response.reply !== 'string' || !response.reply.trim()) {
+        throw new Error('Respuesta inválida del asistente')
       }
 
       setMessages((previous) => [
@@ -65,14 +62,25 @@ export default function ChatPage() {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          text: 'Respuesta simulada: recibí tu mensaje. La conexión con Gemini todavía está pendiente.',
+          text: response.reply.trim(),
         },
       ])
 
       setFailedMessage(null)
-    } catch {
-      setError('No se pudo obtener la respuesta. Puedes reintentar.')
-      setFailedMessage(text)
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) {
+        setError('Tu sesión no es válida o ha vencido. Vuelve a iniciar sesión.')
+        setFailedMessage(null)
+      } else if (error instanceof ApiError && error.status === 503) {
+        setError('El asistente no está disponible en este momento. Intenta más tarde.')
+        setFailedMessage(text)
+      } else if (error instanceof ApiError && error.status === 504) {
+        setError('El asistente tardó demasiado en responder. Puedes reintentar.')
+        setFailedMessage(text)
+      } else {
+        setError('No se pudo obtener la respuesta. Puedes reintentar.')
+        setFailedMessage(text)
+      }
     } finally {
       requestInFlight.current = false
       setIsLoading(false)
@@ -93,7 +101,7 @@ export default function ChatPage() {
 
       <Card>
         <p className="mb-4 rounded-lg bg-primary/10 p-3 text-sm text-primary">
-          Modo demostración: todavía no hay conexión con Gemini.
+          Orientación educativa. No compartas contraseñas, tokens ni datos sensibles.
         </p>
 
         <div
@@ -118,15 +126,7 @@ export default function ChatPage() {
             </div>
           ))}
         </div>
-        <label className="mt-4 flex items-center gap-2 text-sm text-on-surface-variant">
-          <input
-            type="checkbox"
-            checked={simulateError}
-            disabled={isLoading}
-            onChange={(event) => setSimulateError(event.target.checked)}
-          />
-          Demostración: hacer fallar el siguiente intento
-        </label>
+
 
         {error && (
           <div className="mt-4 rounded-lg bg-error-container/30 p-3">
