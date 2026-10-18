@@ -40,6 +40,22 @@ export async function getAssistantReply(value: unknown): Promise<string> {
             systemInstruction: SYSTEM_INSTRUCTION,
         },
     }).catch((error: unknown) => {
+        const details =
+            typeof error === 'object' && error !== null
+                ? (error as Record<string, unknown>)
+                : {}
+
+        const status =
+            typeof details.status === 'number'
+                ? details.status
+                : typeof details.statusCode === 'number'
+                    ? details.statusCode
+                    : null
+
+        console.error('[assistant] Fallo de Gemini', {
+            name: error instanceof Error ? error.name : 'UnknownError',
+            status,
+        })
         if (
             error instanceof Error &&
             error.name === 'APIConnectionTimeoutError'
