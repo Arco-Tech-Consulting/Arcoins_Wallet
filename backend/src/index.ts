@@ -19,7 +19,7 @@ app.get('/docs', (_req, res) => res.redirect('/api-docs'));
 // Ruta raíz de prueba
 app.get('/', (req, res) => {
   res.json({
-    message: 'ArcoPay Backend Running successfully 🚀',
+    message: 'Arcoins Backend Running successfully 🚀',
     docs: '/api-docs',
   });
 });

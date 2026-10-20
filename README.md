@@ -14,7 +14,7 @@ realizar conversiones y registrar movimientos de forma segura y transparente.
 
 - Sebastián Pérez
 - Fabián Fonnegra
-- Marcos Alejandro Luna
+- Marcos Luna
 - Chary Morales
 
 ## Tecnologías
@@ -75,6 +75,8 @@ npm test           # suite de tests
 ```
 
 Necesita un archivo `backend/.env` con `DATABASE_URL` (ver `backend/.env.example`).
+La configuración completa de entornos, comandos y estructura del backend está
+documentada en [`backend/README.md`](backend/README.md).
 
 ### Frontend
 
@@ -94,6 +96,7 @@ documentada en [`frontend/README.md`](frontend/README.md).
 
 | Recurso | Contenido |
 | --- | --- |
+| [`backend/README.md`](backend/README.md) | Instalación, variables de entorno, base de datos, endpoints y arquitectura del backend |
 | [`frontend/README.md`](frontend/README.md) | Instalación, variables de entorno, estructura y despliegue del frontend |
 | [`frontend/docs/api-contract.md`](frontend/docs/api-contract.md) | Contrato de los endpoints consumidos por el frontend |
 | `backend/src/docs/openapi.yaml` | Especificación OpenAPI; Swagger UI en `/api-docs` |
