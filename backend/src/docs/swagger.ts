@@ -36,7 +36,7 @@ if (swaggerDocument) {
     '/',
     swaggerUi.serve,
     swaggerUi.setup(swaggerDocument, {
-      customSiteTitle: 'ArcoPay API Docs | Swagger UI',
+      customSiteTitle: 'Arcoins API Docs | Swagger UI',
       swaggerOptions: {
         persistAuthorization: true,
       },

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: ArcoPay API - Billetera Digital Multidivisa
+  title: Arcoins API - Billetera Digital Multidivisa
   description: |
     API REST para la gestión de billetera digital multidivisa (**Arcoins Wallet**).
     
@@ -16,7 +16,7 @@ info:
     ```
   version: 1.0.0
   contact:
-    name: Equipo ArcoPay / Arcoins Wallet
+    name: Equipo Arcoins Wallet
 servers:
   - url: https://arcoinswallet-production.up.railway.app
     description: Servidor de Producción (Railway)
@@ -54,7 +54,7 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: ArcoPay Backend Running successfully 🚀
+                    example: Arcoins Backend Running successfully 🚀
 
   /api/auth/register:
     post:
