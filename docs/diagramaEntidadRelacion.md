@@ -2,65 +2,83 @@
 erDiagram
     USERS {
         uuid id PK
-        varchar name
-        varchar email
+        varchar email UK
         varchar password_hash
+        varchar first_name
+        varchar last_name
+        boolean is_active
         timestamp created_at
+        timestamp updated_at
     }
 
     WALLETS {
         uuid id PK
-        uuid user_id FK
+        uuid user_id FK, UK
         timestamp created_at
+        timestamp updated_at
     }
 
     CURRENCIES {
-        varchar code PK
+        char code PK
         varchar name
         varchar symbol
+        smallint decimals
+        boolean is_active
+        timestamp created_at
     }
 
     WALLET_BALANCES {
         uuid id PK
-        uuid wallet_id FK
-        varchar currency_code FK
-        numeric amount "CHECK (amount >= 0)"
+        uuid wallet_id FK, UK
+        char currency FK, UK
+        numeric amount
+        timestamp updated_at
     }
 
     MERCHANTS {
         uuid id PK
-        varchar name
+        varchar name UK
         varchar category
-        varchar currency
+        text description
+        boolean is_active
+        timestamp created_at
     }
 
     TRANSACTIONS {
         uuid id PK
         uuid user_id FK
-        uuid merchant_id FK "nullable"
-        varchar type
-        varchar from_currency FK
-        varchar to_currency FK
+        transaction_type type
+        transaction_status status
+        char from_currency FK
+        char to_currency FK
         numeric from_amount
         numeric to_amount
         numeric rate_used
         timestamp rate_timestamp
-        varchar status
+        uuid counterpart_user_id FK
+        uuid transfer_group_id
+        uuid merchant_id FK
+        varchar description
         timestamp created_at
     }
 
     EXCHANGE_RATES {
         uuid id PK
-        varchar base_currency
-        varchar target_currency
+        char base_currency FK
+        char target_currency FK
         numeric rate
+        varchar source
         timestamp fetched_at
     }
 
-    USERS ||--o{ WALLETS : "posee"
+    USERS ||--o| WALLETS : "posee"
     WALLETS ||--o{ WALLET_BALANCES : "contiene"
     CURRENCIES ||--o{ WALLET_BALANCES : "define"
-    CURRENCIES ||--o{ TRANSACTIONS : "origen"
-    CURRENCIES ||--o{ TRANSACTIONS : "destino"
+    CURRENCIES |o--o{ TRANSACTIONS : "origen"
+    CURRENCIES |o--o{ TRANSACTIONS : "destino"
     USERS ||--o{ TRANSACTIONS : "ejecuta"
-    MERCHANTS ||--o{ TRANSACTIONS : "recibe_pago"
+    USERS |o--o{ TRANSACTIONS : "contraparte"
+    MERCHANTS |o--o{ TRANSACTIONS : "recibe_pago"
+    CURRENCIES ||--o{ EXCHANGE_RATES : "base"
+    CURRENCIES ||--o{ EXCHANGE_RATES : "target"
+```
