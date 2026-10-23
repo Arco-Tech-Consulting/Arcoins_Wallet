@@ -15,13 +15,14 @@ export class AuthController {
    */
   public async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
+      const { email, password, confirmPassword } = req.body;
       const firstName = req.body.firstName || req.body.first_name;
       const lastName = req.body.lastName || req.body.last_name;
 
       const result = await this.authService.register({
         email,
         password,
+        confirmPassword,
         firstName,
         lastName,
       });

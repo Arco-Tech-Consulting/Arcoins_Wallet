@@ -90,7 +90,7 @@ paths:
                     error: El formato del correo electrónico no es válido
                 password_corta:
                   value:
-                    error: La contraseña debe tener al menos 6 caracteres
+                    error: La contraseña debe tener al menos 8 caracteres
         "409":
           description: El correo electrónico ya se encuentra registrado
           content:
@@ -736,8 +736,15 @@ components:
         password:
           type: string
           format: password
-          minLength: 6
-          example: secreto123
+          minLength: 8
+          example: Password123!
+          description: Debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número o símbolo.
+        confirmPassword:
+          type: string
+          format: password
+          minLength: 8
+          example: Password123!
+          description: Debe coincidir con el campo password.
 
     LoginDto:
       type: object
