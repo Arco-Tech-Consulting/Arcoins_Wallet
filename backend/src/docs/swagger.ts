@@ -8,7 +8,6 @@ const router = Router();
 
 // Buscar openapi.yaml en posibles ubicaciones para soportar tanto desarrollo (tsx) como producción (dist/tsc)
 const candidatePaths = [
-  path.resolve(process.cwd(), 'src/docs/openapi.yaml'),
   path.resolve(process.cwd(), 'openapi.yaml'),
   path.resolve(__dirname, 'openapi.yaml'),
   path.resolve(__dirname, '../docs/openapi.yaml'),
