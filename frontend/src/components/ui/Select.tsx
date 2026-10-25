@@ -16,7 +16,7 @@ export function Select({ label, className = '', id, children, ...rest }: SelectP
       ) : null}
       <select
         id={selectId}
-        className={`w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 ${className}`}
+        className={`w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-base text-on-surface outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm ${className}`}
         {...rest}
       >
         {children}
