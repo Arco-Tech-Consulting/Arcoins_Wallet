@@ -15,7 +15,8 @@ export function LandingNav() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-30 border-b border-outline-variant/30 bg-surface/80 backdrop-blur">
+    <>
+      <header className="sticky top-0 z-30 border-b border-outline-variant/30 bg-surface/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link to="/" aria-label="Arcoins Wallet, inicio">
           <Brand markClassName="size-7" />
@@ -61,6 +62,7 @@ export function LandingNav() {
           </svg>
         </button>
       </div>
+      </header>
 
       <Drawer
         id="landing-drawer"
@@ -99,6 +101,6 @@ export function LandingNav() {
           </ButtonLink>
         </div>
       </Drawer>
-    </header>
+    </>
   )
 }

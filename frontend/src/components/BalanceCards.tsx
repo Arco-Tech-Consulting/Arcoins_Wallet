@@ -21,7 +21,7 @@ export function BalanceCards({ className = '' }: BalanceCardsProps) {
           <m.div
             key={code}
             className="rounded-lg bg-surface-container-high/50 p-3"
-            initial={{ opacity: 0, y: 12 }}
+            initial={balancesQuery.isLoading ? { opacity: 0, y: 12 } : false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: 'easeOut', delay: index * 0.06 }}
           >
