@@ -16,6 +16,7 @@ backend vive en la misma monorepo (`backend/`).
 | UI | React 19 + TypeScript |
 | Build | Vite 8 |
 | Estilos | Tailwind CSS v4 |
+| Animaciones | Motion (via `LazyMotion` + `domAnimation`, respeta `prefers-reduced-motion`) |
 | Routing | React Router 7 (`BrowserRouter`) |
 | Estado servidor | TanStack Query 5 (data fetching + caché) |
 | Estado de sesión | React Context (JWT) |
@@ -98,14 +99,16 @@ frontend/
 │   │   ├── merchants.api.ts
 │   │   └── chat.api.ts
 │   ├── features/              # pantallas, una carpeta por caso de uso
+│   │   ├── landing/           # landing page pública
 │   │   ├── auth/              # login y registro
 │   │   ├── dashboard/         # resumen de saldos y movimientos
 │   │   ├── transactions/      # operaciones (compra/venta) e historial
 │   │   ├── deposit/           # depósito
 │   │   ├── payments/          # pagos a comercios
 │   │   ├── budget/            # calculadora de presupuesto
-│   │   └── chat/              # asistente IA
-│   ├── components/ui/         # primitivas visuales: Button, Card, Input, Select, Spinner
+│   │   ├── chat/              # asistente IA
+│   │   └── not-found/         # página 404
+│   ├── components/ui/         # primitivas: Button, ButtonLink, Brand, Card, Drawer, Input, Select, Spinner
 │   ├── context/               # AuthContext (sesión/JWT)
 │   ├── layouts/               # AuthLayout y AppLayout (con navegación)
 │   ├── router/                # ProtectedRoute
@@ -126,24 +129,29 @@ frontend/
 
 | Ruta | Pantalla | Acceso |
 | --- | --- | --- |
+| `/` | Landing pública (presentación del producto; con sesión activa redirige a `/dashboard`) | pública |
 | `/login` | Inicio de sesión | pública |
 | `/register` | Registro | pública |
-| `/` | Dashboard (saldos y últimos movimientos) | protegida |
+| `/dashboard` | Dashboard (saldos y últimos movimientos) | protegida |
 | `/operations` | Compra, venta e intercambio de moneda | protegida |
 | `/deposit` | Depósito | protegida |
 | `/payments` | Pago a comercios | protegida |
 | `/history` | Historial de transacciones con filtros | protegida |
 | `/chat` | Asistente IA | protegida |
 | `/budget` | Calculadora de presupuesto | protegida |
-| `*` | Redirige a `/` | — |
+| `*` | Página 404 con enlaces de salida | — |
 
-Todas las rutas protegidas renderizan dentro de `AppLayout` (navegación
-superior/lateral) y requieren JWT; sin token se redirige a `/login`.
+Todas las rutas protegidas renderizan dentro de `AppLayout` (navegación de
+escritorio + menú lateral en móvil) y requieren JWT; sin token se redirige a
+`/login` conservando la ruta de origen para volver tras autenticarse.
 
 ---
 
 ## Funcionalidades
 
+- **Landing pública:** presentación del producto con hero animado, cifras
+  ilustrativas (no reales), cómo funciona, funcionalidades, demostración del
+  asistente y llamados a crear cuenta. Con sesión activa redirige a la app.
 - **Autenticación:** registro, inicio de sesión y persistencia del JWT
   (`Authorization: Bearer <jwt>` en cada petición).
 - **Dashboard:** consulta de saldos en las tres monedas y resumen de
@@ -158,6 +166,14 @@ superior/lateral) y requieren JWT; sin token se redirige a `/login`.
 - **Asistente IA:** chat con respuestas del backend (Gemini) y estados de
   carga, error y reintento.
 - **Calculadora de presupuesto:** estimación de un viaje según días y gasto diario.
+
+### Responsive (mobile-first)
+
+- Las pantallas se diseñan apiladas y escalan con `sm:` / `md:` / `lg:`.
+- `AppLayout` incluye menú lateral (drawer) para móvil, con cierre al navegar
+  y por tecla `Escape`.
+- Botones y enlaces con área táctil de al menos 44 px (`min-h-11`).
+- Los inputs usan `text-base` en móvil para evitar el zoom automático de iOS.
 
 ---
 
@@ -187,7 +203,9 @@ npm test
 
 Cubren las utilidades puras (formatters, cálculos de operaciones, dashboard,
 presupuesto) y el comportamiento de las pantallas (login, dashboard,
-operaciones, historial, depósito y pagos) con MSW respondiendo a la API.
+operaciones, historial, depósito y pagos) con MSW respondiendo a la API, junto
+con la landing (hero, secciones y redirección con sesión activa) y el menú
+móvil de `AppLayout` (apertura, navegación y cierre por `Escape`).
 
 ---
 

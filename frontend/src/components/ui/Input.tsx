@@ -17,7 +17,7 @@ export function Input({ label, error, className = '', id, ...rest }: InputProps)
       ) : null}
       <input
         id={inputId}
-        className={`w-full rounded-lg border bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none transition-colors placeholder:text-outline focus:ring-2 ${
+        className={`w-full rounded-lg border bg-surface-container-lowest px-3 py-2 text-base text-on-surface outline-none transition-colors placeholder:text-outline focus:ring-2 sm:text-sm ${
           error
             ? 'border-error focus:border-error focus:ring-error/20'
             : 'border-outline-variant focus:border-primary focus:ring-primary/20'

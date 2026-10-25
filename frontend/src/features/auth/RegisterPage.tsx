@@ -47,7 +47,7 @@ export default function RegisterPage() {
     try {
       await apiRegister({ firstName, lastName, email, password, confirmPassword })
       await login({ email, password })
-      navigate('/', { replace: true })
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo registrar')
     } finally {
