@@ -109,4 +109,4 @@ export const HERO_SAMPLE = {
   rateLine: '1 USD = $4.180',
 }
 
-export const TEAM_MEMBERS = ['Sebastián', 'Fabián', 'Marcos', 'Chary']
+export const COMPANY_NAME = 'Arco Tech Consulting'

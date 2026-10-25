@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { AnimatePresence, m } from 'motion/react'
 import { useAuth } from '@/context/AuthContext'
 import { Brand } from '@/components/ui/Brand'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function AppLayout() {
   const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
 
   return (
     <div className="min-h-svh bg-surface">
@@ -135,9 +137,18 @@ export default function AppLayout() {
         </Button>
       </Drawer>
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">
-        <Outlet />
-      </main>
+      <AnimatePresence mode="wait">
+        <m.main
+          key={location.pathname}
+          className="mx-auto w-full max-w-6xl px-4 py-6"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+        >
+          <Outlet />
+        </m.main>
+      </AnimatePresence>
     </div>
   )
 }
