@@ -44,6 +44,7 @@ export class AuthService {
     const lastName = dto.lastName?.trim();
     const email = dto.email?.trim().toLowerCase();
     const password = dto.password;
+    const confirmPassword = dto.confirmPassword;
 
     if (!firstName || !lastName || !email || !password) {
       throw new AuthError('Todos los campos son requeridos (nombre, apellido, email, contraseña)', 400);
@@ -53,8 +54,24 @@ export class AuthService {
       throw new AuthError('El formato del correo electrónico no es válido', 400);
     }
 
-    if (password.length < 6) {
-      throw new AuthError('La contraseña debe tener al menos 6 caracteres', 400);
+    if (confirmPassword !== undefined && confirmPassword !== password) {
+      throw new AuthError('Las contraseñas no coinciden', 400);
+    }
+
+    if (password.length < 8) {
+      throw new AuthError('La contraseña debe tener al menos 8 caracteres', 400);
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      throw new AuthError('La contraseña debe contener al menos una letra mayúscula', 400);
+    }
+
+    if (!/[a-z]/.test(password)) {
+      throw new AuthError('La contraseña debe contener al menos una letra minúscula', 400);
+    }
+
+    if (!/[0-9\W_]/.test(password)) {
+      throw new AuthError('La contraseña debe contener al menos un número o símbolo', 400);
     }
 
     // Verificar si el usuario ya existe

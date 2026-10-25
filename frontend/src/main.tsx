@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
+import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
 import App from './App.tsx'
 import { AuthProvider } from '@/context/AuthContext'
 import { queryClient } from '@/lib/queryClient'
@@ -18,13 +19,17 @@ async function enableMocking() {
 void enableMocking().then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
+      <MotionConfig reducedMotion="user">
+        <LazyMotion features={domAnimation}>
+          <QueryClientProvider client={queryClient}>
+            <BrowserRouter>
+              <AuthProvider>
+                <App />
+              </AuthProvider>
+            </BrowserRouter>
+          </QueryClientProvider>
+        </LazyMotion>
+      </MotionConfig>
     </StrictMode>,
   )
 })

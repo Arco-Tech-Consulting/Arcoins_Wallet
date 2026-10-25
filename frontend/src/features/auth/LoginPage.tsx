@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -20,7 +21,9 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       await login({ email, password })
-      navigate('/', { replace: true })
+      const from = (location.state as { from?: { pathname?: string } } | null)
+        ?.from?.pathname
+      navigate(from ?? '/dashboard', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión')
     } finally {

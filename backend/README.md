@@ -111,7 +111,6 @@ backend/
     │   ├── setup.sql          # Creación de tablas, enums, triggers e índices
     │   └── seed.sql           # Carga inicial de divisas, comercios y datos de prueba
     ├── docs/                  # Documentación interactiva de la API
-    │   ├── openapi.yaml       # Especificación OpenAPI 3.0.3
     │   └── swagger.ts         # Integración y montaje de Swagger UI
     ├── middlewares/           # Middlewares de Express
     │   └── auth.middleware.ts # Validación de token JWT (Bearer Token)

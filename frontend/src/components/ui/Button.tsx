@@ -1,19 +1,11 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, MouseEventHandler, ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Spinner } from './Spinner'
-
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+import { buttonClasses, type ButtonVariant } from './buttonStyles'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
+  variant?: ButtonVariant
   loading?: boolean
-}
-
-const variantStyles: Record<Variant, string> = {
-  primary: 'bg-primary-container text-on-primary-container hover:brightness-110',
-  secondary: 'bg-surface-container-high text-on-surface hover:bg-surface-bright',
-  ghost:
-    'bg-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
-  danger: 'bg-error-container text-on-error-container hover:brightness-110',
 }
 
 export function Button({
@@ -26,12 +18,38 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variantStyles[variant]} ${className}`}
+      className={`${buttonClasses(variant)} ${className}`}
       disabled={disabled || loading}
       {...rest}
     >
       {loading ? <Spinner className="size-4" /> : null}
       {children}
     </button>
+  )
+}
+
+interface ButtonLinkProps {
+  to: string
+  variant?: ButtonVariant
+  className?: string
+  onClick?: MouseEventHandler<HTMLAnchorElement>
+  children: ReactNode
+}
+
+export function ButtonLink({
+  to,
+  variant = 'primary',
+  className = '',
+  onClick,
+  children,
+}: ButtonLinkProps) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className={`${buttonClasses(variant)} ${className}`}
+    >
+      {children}
+    </Link>
   )
 }

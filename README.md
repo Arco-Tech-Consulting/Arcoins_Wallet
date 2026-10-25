@@ -99,7 +99,7 @@ documentada en [`frontend/README.md`](frontend/README.md).
 | [`backend/README.md`](backend/README.md) | Instalación, variables de entorno, base de datos, endpoints y arquitectura del backend |
 | [`frontend/README.md`](frontend/README.md) | Instalación, variables de entorno, estructura y despliegue del frontend |
 | [`frontend/docs/api-contract.md`](frontend/docs/api-contract.md) | Contrato de los endpoints consumidos por el frontend |
-| `backend/src/docs/openapi.yaml` | Especificación OpenAPI; Swagger UI en `/api-docs` |
+| [`backend/openapi.yaml`](backend/openapi.yaml) | Especificación OpenAPI; Swagger UI en `/api-docs` |
 
 ### docs/
 

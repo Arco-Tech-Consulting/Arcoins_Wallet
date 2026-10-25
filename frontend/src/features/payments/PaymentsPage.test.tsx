@@ -10,7 +10,7 @@ describe('PaymentsPage', () => {
     localStorage.setItem('arcoins.token', DEMO_TOKEN)
   })
 
-  it('muestra los comercios y el formulario de pago', async () => {
+  it('muestra los comercios, los saldos y el formulario de pago', async () => {
     renderWithProviders(<PaymentsPage />)
 
     expect(screen.getByRole('heading', { name: 'Pagos' })).toBeInTheDocument()
@@ -20,6 +20,9 @@ describe('PaymentsPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Monto en COP')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Pagar' })).toBeInTheDocument()
+
+    expect(await screen.findByText('Peso colombiano')).toBeInTheDocument()
+    expect(await screen.findByText('Saldo en COP')).toBeInTheDocument()
   })
 
   it('deshabilita el botón mientras el monto no es válido', () => {

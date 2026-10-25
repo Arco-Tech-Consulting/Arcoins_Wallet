@@ -42,20 +42,44 @@ describe('AuthService', () => {
   describe('register validation', () => {
     it('falla si faltan campos obligatorios', async () => {
       await expect(
-        authService.register({ firstName: '', lastName: 'Perez', email: 'a@b.com', password: 'secretpassword' })
+        authService.register({ firstName: '', lastName: 'Perez', email: 'a@b.com', password: 'Password123!' })
       ).rejects.toThrow(AuthError);
     });
 
     it('falla si el email no es válido', async () => {
       await expect(
-        authService.register({ firstName: 'Juan', lastName: 'Perez', email: 'invalid-email', password: 'secretpassword' })
+        authService.register({ firstName: 'Juan', lastName: 'Perez', email: 'invalid-email', password: 'Password123!' })
       ).rejects.toThrow('El formato del correo electrónico no es válido');
     });
 
-    it('falla si la contraseña tiene menos de 6 caracteres', async () => {
+    it('falla si la contraseña tiene menos de 8 caracteres', async () => {
       await expect(
         authService.register({ firstName: 'Juan', lastName: 'Perez', email: 'juan@test.com', password: '123' })
-      ).rejects.toThrow('La contraseña debe tener al menos 6 caracteres');
+      ).rejects.toThrow('La contraseña debe tener al menos 8 caracteres');
+    });
+
+    it('falla si la contraseña no contiene mayúsculas', async () => {
+      await expect(
+        authService.register({ firstName: 'Juan', lastName: 'Perez', email: 'juan@test.com', password: 'password123!' })
+      ).rejects.toThrow('La contraseña debe contener al menos una letra mayúscula');
+    });
+
+    it('falla si la contraseña no contiene minúsculas', async () => {
+      await expect(
+        authService.register({ firstName: 'Juan', lastName: 'Perez', email: 'juan@test.com', password: 'PASSWORD123!' })
+      ).rejects.toThrow('La contraseña debe contener al menos una letra minúscula');
+    });
+
+    it('falla si la contraseña no contiene números o símbolos', async () => {
+      await expect(
+        authService.register({ firstName: 'Juan', lastName: 'Perez', email: 'juan@test.com', password: 'PasswordOnly' })
+      ).rejects.toThrow('La contraseña debe contener al menos un número o símbolo');
+    });
+
+    it('falla si las contraseñas no coinciden', async () => {
+      await expect(
+        authService.register({ firstName: 'Juan', lastName: 'Perez', email: 'juan@test.com', password: 'Password123!', confirmPassword: 'Password456!' })
+      ).rejects.toThrow('Las contraseñas no coinciden');
     });
   });
 
