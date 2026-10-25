@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { BalanceCards } from '@/components/BalanceCards'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -86,6 +87,8 @@ export default function OperationsPage() {
       </header>
 
       <Card>
+        <BalanceCards className="mb-5" />
+
         <div className="mb-4 inline-flex rounded-lg bg-surface-container-lowest p-1">
           {OPERATION_TABS.map((tab) => (
             <button

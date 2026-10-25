@@ -1,5 +1,11 @@
 BEGIN;
 
+-- Este archivo esta guardado en UTF-8. Se declara de forma explicita para que
+-- el servidor no reinterprete los acentos segun la configuracion del cliente
+-- (por defecto, algunos clientes en Windows envian otra codificacion y los
+-- nombres quedan corruptos en la base).
+SET client_encoding = 'UTF8';
+
 -- ---------------------------------------------------------------------
 -- Monedas
 -- ---------------------------------------------------------------------

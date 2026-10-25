@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Brand } from '@/components/ui/Brand'
-import { TEAM_MEMBERS } from './landing.content'
+import { COMPANY_NAME } from './landing.content'
 
 export function LandingFooter() {
   return (
@@ -55,9 +55,7 @@ export function LandingFooter() {
 
       <div className="border-t border-outline-variant/30">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-outline sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Hecho por {TEAM_MEMBERS.join(', ')} para el proyecto final de Henry.
-          </span>
+          <span>Desarrollado por {COMPANY_NAME}</span>
           <span>Arcoins Wallet</span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { m } from 'motion/react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -66,7 +67,7 @@ function TransactionIcon({ tone }: { tone: TransactionTone }) {
   )
 }
 
-function TransactionRow({ tx }: { tx: Transaction }) {
+function TransactionRow({ tx, index }: { tx: Transaction; index: number }) {
   const { title, tone } = describeTransaction(tx)
   const status = TRANSACTION_STATUS_META[tx.status]
 
@@ -75,7 +76,12 @@ function TransactionRow({ tx }: { tx: Transaction }) {
     tone === 'positive' ? 'text-secondary' : 'text-on-surface'
 
   return (
-    <li className="flex items-center gap-4 py-3">
+    <m.li
+      className="flex items-center gap-4 py-3"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut', delay: index * 0.03 }}
+    >
       <TransactionIcon tone={tone} />
 
       <div className="min-w-0 flex-1">
@@ -113,7 +119,7 @@ function TransactionRow({ tx }: { tx: Transaction }) {
           {status.label}
         </span>
       </div>
-    </li>
+    </m.li>
   )
 }
 
@@ -218,8 +224,8 @@ export default function HistoryPage() {
           </p>
         ) : (
           <ul className="divide-y divide-outline-variant/30">
-            {query.data.data.map((tx) => (
-              <TransactionRow key={tx.id} tx={tx} />
+            {query.data.data.map((tx, index) => (
+              <TransactionRow key={tx.id} tx={tx} index={index} />
             ))}
           </ul>
         )}

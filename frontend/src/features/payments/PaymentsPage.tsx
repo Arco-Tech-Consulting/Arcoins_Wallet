@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { BalanceCards } from '@/components/BalanceCards'
 import { getBalances } from '@/api/wallet.api'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -77,6 +78,8 @@ export default function PaymentsPage() {
       </header>
 
       <Card>
+        <BalanceCards className="mb-5" />
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Select
             label="Comercio"
