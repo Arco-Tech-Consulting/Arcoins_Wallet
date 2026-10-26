@@ -12,19 +12,47 @@ export class FinancialController {
    * Obtiene el saldo de un usuario para una moneda dada.
    * * GET /api/financial/balance/:walletId/:currency
    */
-  public async getBalance(req: Request, res: Response): Promise<void> {
+  public async getBalance(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { walletId, currency } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: "Usuario no autenticado",
+        });
+        return;
+      }
 
       if (typeof walletId !== "string" || typeof currency !== "string") {
         res.status(400).json({
           success: false,
-          error: "Parámetros de billetera o moneda inválidos",
+          error: "Párametros de billetera o moneda inválidos",
+        });
+        return;
+      }
+
+      //verificación de que la billetera pertenezca al usuario
+      const userWallet = await financialRepository.getWalletByUserId(userId);
+
+      if (!userWallet || userWallet.id !== walletId) {
+        res.status(403).json({
+          success: false,
+          error: "No tienes periso para consultar esta billetera",
         });
         return;
       }
 
       const normalizedCurrency = currency.toUpperCase();
+
+      if (!["COP", "USD", "EUR"].includes(normalizedCurrency)) {
+        res.status(400).json({
+          success: false,
+          error: "Moneda no soportada",
+        });
+        return;
+      }
 
       const balance = await financialRepository.getBalance(
         walletId,
@@ -37,10 +65,10 @@ export class FinancialController {
         currency: normalizedCurrency,
         balance,
       });
-    } catch (error: any) {
-      res.status(400).json({
+    } catch (error) {
+      res.status(500).json({
         success: false,
-        error: error.message,
+        error: "Error al consultar el saldo",
       });
     }
   }
