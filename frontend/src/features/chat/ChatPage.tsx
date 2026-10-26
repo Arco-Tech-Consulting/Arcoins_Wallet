@@ -22,7 +22,7 @@ export default function ChatPage() {
     {
       id: 'welcome',
       role: 'assistant',
-      text: '¡Hola! Puedo orientarte sobre ahorro y organización de gastos. No tengo acceso a tus saldos ni movimientos.',
+      text: '¡Hola! Puedo ayudarte a interpretar el resumen de tus saldos y hasta 10 movimientos recientes cuando esté disponible. No puedo ejecutar operaciones ni consultar todo tu historial.',
     },
   ])
 
@@ -101,7 +101,9 @@ export default function ChatPage() {
 
       <Card>
         <p className="mb-4 rounded-lg bg-primary/10 p-3 text-sm text-primary">
-          Orientación educativa. No compartas contraseñas, tokens ni datos sensibles.
+          Al enviar un mensaje, se comparte con Gemini un resumen de tus
+          saldos y hasta 10 movimientos recientes para generar orientación
+          educativa. No compartas contraseñas, tokens ni otros datos sensibles.
         </p>
 
         <div

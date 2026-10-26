@@ -5,15 +5,26 @@ import request from 'supertest'
 
 const mocks = vi.hoisted(() => ({
     getAssistantReply: vi.fn(),
+    getAssistantFinancialSummary: vi.fn(),
 }))
 
 vi.mock('../services/assistant.service', () => ({
     getAssistantReply: mocks.getAssistantReply,
 }))
 
+vi.mock('../services/assistant.summary.service', () => ({
+    getAssistantFinancialSummary: mocks.getAssistantFinancialSummary,
+}))
+
 import assistantRoutes from './assistant.routes'
 
 const TEST_SECRET = 'clave-ficticia-exclusiva-para-pruebas'
+
+const summary = {
+    generatedAt: '2026-10-26T14:00:00.000Z',
+    balances: [{ currency: 'USD', amount: 25 }],
+    recentTransactions: [],
+}
 
 const app = express()
 app.use(express.json())
@@ -23,6 +34,7 @@ describe('POST /api/chat', () => {
     beforeEach(() => {
         vi.resetAllMocks()
         vi.stubEnv('JWT_SECRET', TEST_SECRET)
+        mocks.getAssistantFinancialSummary.mockResolvedValue(summary)
     })
 
     afterEach(() => {
@@ -37,6 +49,7 @@ describe('POST /api/chat', () => {
         expect(response.status).toBe(401)
         expect(response.body).toHaveProperty('error')
         expect(mocks.getAssistantReply).not.toHaveBeenCalled()
+        expect(mocks.getAssistantFinancialSummary).not.toHaveBeenCalled()
     })
 
     it('rechaza un token con firma incorrecta', async () => {
@@ -53,6 +66,7 @@ describe('POST /api/chat', () => {
 
         expect(response.status).toBe(401)
         expect(mocks.getAssistantReply).not.toHaveBeenCalled()
+        expect(mocks.getAssistantFinancialSummary).not.toHaveBeenCalled()
     })
 
     it('rechaza un token expirado', async () => {
@@ -69,6 +83,7 @@ describe('POST /api/chat', () => {
 
         expect(response.status).toBe(401)
         expect(mocks.getAssistantReply).not.toHaveBeenCalled()
+        expect(mocks.getAssistantFinancialSummary).not.toHaveBeenCalled()
     })
 
     it('permite acceder con un token válido', async () => {
@@ -91,8 +106,11 @@ describe('POST /api/chat', () => {
         expect(response.body).toEqual({
             reply: 'Puedes organizar tus gastos por categorías.',
         })
-        expect(mocks.getAssistantReply).toHaveBeenCalledExactlyOnceWith(
-            '¿Cómo organizo mis gastos?',
+        expect(mocks.getAssistantFinancialSummary).toHaveBeenCalledExactlyOnceWith(
+            'usuario-prueba',
         )
     })
+
+
+
 })

@@ -131,4 +131,37 @@ describe('getAssistantReply', () => {
             code: 'PROVIDER_ERROR',
         })
     })
+
+    it('envía el mensaje y el resumen financiero a Gemini', async () => {
+        mocks.generateContent.mockResolvedValue({
+            text: 'Tu saldo registrado es de 25 USD.',
+        })
+
+        const summary = {
+            generatedAt: '2026-10-26T14:00:00.000Z',
+            balances: [
+                { currency: 'USD', amount: 25 },
+            ],
+            recentTransactions: [],
+        }
+
+        const reply = await getAssistantReply(
+            '  ¿Cuál es mi saldo?  ',
+            summary,
+        )
+
+        expect(mocks.generateContent).toHaveBeenCalledOnce()
+        expect(mocks.generateContent).toHaveBeenCalledWith({
+            model: 'modelo-de-prueba',
+            contents: JSON.stringify({
+                message: '¿Cuál es mi saldo?',
+                financialSummary: summary,
+            }),
+            config: {
+                systemInstruction: expect.any(String),
+            },
+        })
+
+        expect(reply).toBe('Tu saldo registrado es de 25 USD.')
+    })
 })

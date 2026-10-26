@@ -1,7 +1,11 @@
-import type { Request, Response } from 'express'
+import type { Response } from 'express'
+import type { AuthenticatedRequest } from '../types/auth.types'
 import { getAssistantReply } from '../services/assistant.service'
 import { AssistantError } from '../services/assistant.errors'
 import type { AssistantErrorCode } from '../services/assistant.errors'
+import { getAssistantFinancialSummary } from '../services/assistant.summary.service'
+import { validateAssistantMessage } from '../services/assistant.validation'
+
 
 const errorStatus: Record<AssistantErrorCode, number> = {
     INVALID_MESSAGE: 400,
@@ -12,11 +16,22 @@ const errorStatus: Record<AssistantErrorCode, number> = {
 }
 
 export async function chat(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response,
 ): Promise<void> {
     try {
-        const reply = await getAssistantReply(req.body?.message)
+        const userId = req.user?.id
+
+        if (typeof userId !== 'string' || !userId.trim()) {
+            res.status(401).json({
+                error: 'Usuario no autenticado.',
+            })
+            return
+        }
+
+        const message = validateAssistantMessage(req.body?.message)
+        const summary = await getAssistantFinancialSummary(userId)
+        const reply = await getAssistantReply(message, summary)
 
         res.status(200).json({ reply })
     } catch (error: unknown) {

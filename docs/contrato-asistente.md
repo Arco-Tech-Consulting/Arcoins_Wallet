@@ -1,14 +1,18 @@
 # Contrato del asistente de Arcoins
-Estado: endpoint implementado; pruebas con Gemini simulado aprobadas.
-Pendiente: validación del servidor completo, llamada real a Gemini
-y conexión con el frontend.
+Estado: resumen financiero integrado al flujo del asistente;
+pruebas con repositorio y Gemini simulados aprobadas.
+Pendiente: validación con PostgreSQL y Gemini reales, despliegue
+y comprobación del flujo completo desde el frontend.
 Responsable: Chary.
 
 ## Objetivo
 Responder preguntas sobre la billetera y ofrecer orientación
 educativa sobre organización de gastos y ahorro.
 
-La primera versión no consultará saldos ni movimientos reales.
+El backend consulta los saldos por moneda y hasta los últimos
+10 movimientos del usuario autenticado para preparar un resumen.
+El resumen no representa todo el historial ni un informe mensual.
+
 El asistente no ejecutará operaciones ni modificará cuentas.
 
 ## Endpoint
@@ -60,8 +64,8 @@ Los mensajes serán controlados por nuestro backend.
 No se devolverán directamente los errores internos de Gemini.
 
 ## Acuerdos pendientes
-- Integración frontend: conectar el chat con la API real y verificar
-  carga, errores y reintento..
+- Validar en el entorno desplegado las respuestas con contexto financiero,
+junto con los estados de carga, errores y reintento del frontend.
 - Definir el límite de solicitudes por usuario antes de publicar.
 
 ## Autenticación y privacidad
@@ -81,8 +85,16 @@ La clave de Gemini permanecerá exclusivamente en el servidor.
 No se enviarán a Gemini contraseñas, tokens ni datos personales
 innecesarios.
 
-La primera versión recibirá únicamente el mensaje.
-El frontend debe indicar que no se compartan datos sensibles.
+El frontend envía únicamente el mensaje.
+El backend obtiene la identidad desde req.user.id y prepara el resumen.
+Gemini recibe el mensaje, los saldos por moneda, hasta 10 movimientos
+recientes y la fecha de consulta.
 
-Cuando incorporemos datos financieros, el backend consultará
-únicamente los asociados al usuario autenticado.
+El resumen omite nombres, correos, identificadores internos
+y descripciones libres de los movimientos.
+Los movimientos incluyen su estado; no todos representan operaciones
+completadas. Los montos de distintas monedas se mantienen separados.
+
+Si falla la consulta del resumen, no se llama a Gemini.
+El frontend debe informar del uso del resumen y recordar que no se
+compartan contraseñas, tokens ni otros datos sensibles.
