@@ -1,7 +1,8 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import AuthLayout from '@/layouts/AuthLayout'
 import AppLayout from '@/layouts/AppLayout'
 import ProtectedRoute from '@/router/ProtectedRoute'
+import LandingPage from '@/features/landing/LandingPage'
 import LoginPage from '@/features/auth/LoginPage'
 import RegisterPage from '@/features/auth/RegisterPage'
 import DashboardPage from '@/features/dashboard/DashboardPage'
@@ -11,6 +12,7 @@ import DepositPage from '@/features/deposit/DepositPage'
 import PaymentsPage from '@/features/payments/PaymentsPage'
 import ChatPage from '@/features/chat/ChatPage'
 import BudgetPage from '@/features/budget/BudgetPage'
+import NotFoundPage from '@/features/not-found/NotFoundPage'
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
       </Route>
 
+      <Route path="/" element={<LandingPage />} />
+
       <Route
         element={
           <ProtectedRoute>
@@ -27,7 +31,7 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/operations" element={<OperationsPage />} />
         <Route path="/deposit" element={<DepositPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
@@ -36,7 +40,7 @@ export default function App() {
         <Route path="/budget" element={<BudgetPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import { BalanceCards } from '@/components/BalanceCards'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
+import { useBalances } from '@/hooks/useBalances'
 import { CURRENCY_META, formatSymbolAmount } from '@/lib/formatters'
 import { CURRENCIES, type CurrencyCode } from '@/types/api'
-import { useBalances, useCreateDeposit } from './hooks'
+import { useCreateDeposit } from './hooks'
 
 export default function DepositPage() {
   const [currency, setCurrency] = useState<CurrencyCode>('COP')
@@ -55,28 +57,7 @@ export default function DepositPage() {
       </header>
 
       <Card>
-        <div className="mb-5 grid gap-3 sm:grid-cols-3">
-          {CURRENCIES.map((code) => {
-            const value =
-              balancesQuery.data?.find((balance) => balance.currency === code)
-                ?.amount ?? 0
-            return (
-              <div
-                key={code}
-                className="rounded-lg bg-surface-container-high/50 p-3"
-              >
-                <p className="text-xs text-on-surface-variant">
-                  {CURRENCY_META[code].name}
-                </p>
-                <p className="font-display text-lg text-on-surface">
-                  {balancesQuery.isLoading
-                    ? '—'
-                    : formatSymbolAmount(value, code)}
-                </p>
-              </div>
-            )
-          })}
-        </div>
+        <BalanceCards className="mb-5" />
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-3 sm:grid-cols-2">

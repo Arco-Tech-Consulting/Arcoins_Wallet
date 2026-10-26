@@ -9,7 +9,7 @@ describe('OperationsPage', () => {
     localStorage.setItem('arcoins.token', DEMO_TOKEN)
   })
 
-  it('muestra las tres operaciones y el formulario con la tasa', async () => {
+  it('muestra las tres operaciones, los saldos y el formulario con la tasa', async () => {
     renderWithProviders(<OperationsPage />)
 
     expect(screen.getByRole('button', { name: 'Comprar' })).toBeInTheDocument()
@@ -20,6 +20,9 @@ describe('OperationsPage', () => {
     expect(
       screen.getByRole('button', { name: 'Confirmar operación' }),
     ).toBeInTheDocument()
+
+    expect(await screen.findByText('Peso colombiano')).toBeInTheDocument()
+    expect(await screen.findByText('$2.500.000')).toBeInTheDocument()
 
     expect(await screen.findByText('Tasa')).toBeInTheDocument()
   })
