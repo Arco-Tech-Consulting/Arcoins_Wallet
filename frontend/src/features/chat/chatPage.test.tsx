@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ApiError } from '@/api/client'
-import ChatPage from './ChatPage'
+import ChatPanel from './ChatPanel'
 
 const mocks = vi.hoisted(() => ({
     sendChatMessage: vi.fn(),
@@ -27,7 +27,7 @@ describe('ChatPage', () => {
         })
 
         const user = userEvent.setup()
-        render(<ChatPage />)
+        render(<ChatPanel />)
 
         await user.type(
             screen.getByLabelText('Tu mensaje'),
@@ -52,7 +52,7 @@ describe('ChatPage', () => {
         )
 
         const user = userEvent.setup()
-        render(<ChatPage />)
+        render(<ChatPanel />)
 
         await user.type(screen.getByLabelText('Tu mensaje'), 'Hola')
         await user.click(screen.getByRole('button', { name: 'Enviar' }))
@@ -72,7 +72,7 @@ describe('ChatPage', () => {
             .mockResolvedValueOnce({ reply: 'Empieza registrando tus gastos.' })
 
         const user = userEvent.setup()
-        render(<ChatPage />)
+        render(<ChatPanel />)
 
         await user.type(
             screen.getByLabelText('Tu mensaje'),
@@ -105,7 +105,7 @@ describe('ChatPage', () => {
         )
 
         const user = userEvent.setup()
-        render(<ChatPage />)
+        render(<ChatPanel />)
 
         await user.type(screen.getByLabelText('Tu mensaje'), 'Hola')
         await user.click(screen.getByRole('button', { name: 'Enviar' }))
@@ -129,7 +129,7 @@ describe('ChatPage', () => {
         )
 
         const user = userEvent.setup()
-        render(<ChatPage />)
+        render(<ChatPanel />)
 
         await user.type(screen.getByLabelText('Tu mensaje'), 'Hola')
         await user.click(screen.getByRole('button', { name: 'Enviar' }))

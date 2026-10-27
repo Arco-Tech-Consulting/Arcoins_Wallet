@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { Brand } from '@/components/ui/Brand'
 import { Button } from '@/components/ui/Button'
 import { Drawer } from '@/components/ui/Drawer'
+import FloatingAssistant from '@/features/chat/FloatingAssistant'
 
 interface NavItem {
   to: string
@@ -41,10 +42,9 @@ export default function AppLayout() {
                   to={item.to}
                   end={item.to === '/dashboard'}
                   className={({ isActive }) =>
-                    `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-primary-container/20 text-primary'
-                        : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                    `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive
+                      ? 'bg-primary-container/20 text-primary'
+                      : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                     }`
                   }
                 >
@@ -107,10 +107,9 @@ export default function AppLayout() {
               end={item.to === '/dashboard'}
               onClick={() => setMenuOpen(false)}
               className={({ isActive }) =>
-                `min-h-11 rounded-lg px-3 py-2.5 text-base font-medium transition-colors ${
-                  isActive
-                    ? 'bg-primary-container/20 text-primary'
-                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                `min-h-11 rounded-lg px-3 py-2.5 text-base font-medium transition-colors ${isActive
+                  ? 'bg-primary-container/20 text-primary'
+                  : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                 }`
               }
             >
@@ -146,6 +145,8 @@ export default function AppLayout() {
       >
         <Outlet />
       </m.main>
+
+      {user && <FloatingAssistant key={user.id} />}
     </div>
   )
 }
