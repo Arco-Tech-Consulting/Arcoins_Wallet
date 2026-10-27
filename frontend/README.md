@@ -52,9 +52,9 @@ Se definen en archivos `.env*` (ver `frontend/.env.example`).
 
 | Variable | Efecto | Valor recomendado |
 | --- | --- | --- |
-| `VITE_API_URL` | URL base de la API. | `/api` (dev) · `https://arcoinswallet-production.up.railway.app/api` (producción) |
+| `VITE_API_URL` | URL base de la API. | `/api` (dev) · `https://arcoins-wallet.onrender.com/api` (producción) |
 | `VITE_ENABLE_MOCKS` | Activa MSW. **Solo aplica en desarrollo** (`npm run dev`); en `npm run build` se ignora y siempre se usa la API real. | `true` / `false` |
-| `VITE_PROXY_TARGET` | Destino del proxy de Vite cuando los mocks están desactivados. | `http://localhost:3000` o la URL de Railway |
+| `VITE_PROXY_TARGET` | Destino del proxy de Vite cuando los mocks están desactivados. | `http://localhost:3000` o la URL de Render |
 
 > **Nota importante:** `VITE_*` se inyectan **al compilar**. Si se cambian en
 > Vercel, hay que volver a desplegar para que tomen efecto.
@@ -64,7 +64,7 @@ Para desarrollo local contra el backend real:
 ```bash
 # frontend/.env.development.local
 VITE_ENABLE_MOCKS=false
-VITE_PROXY_TARGET=https://arcoinswallet-production.up.railway.app
+VITE_PROXY_TARGET=https://arcoins-wallet.onrender.com
 ```
 
 ---
@@ -216,8 +216,8 @@ móvil de `AppLayout` (apertura, navegación y cierre por `Escape`).
   `npm run build`, output `dist`.
 - **`vercel.json`** define un rewrite de SPA (`/*` → `index.html`) para que las
   rutas internas no den 404 al recargar.
-- **Backend:** Railway —
-  `https://arcoinswallet-production.up.railway.app/api`
+- **Backend:** Render —
+  `https://arcoins-wallet.onrender.com/api`
 
 ---
 

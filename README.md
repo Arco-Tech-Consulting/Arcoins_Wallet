@@ -7,8 +7,8 @@ realizar conversiones y registrar movimientos de forma segura y transparente.
 **Aplicación en producción**
 
 - Frontend: https://arcoinswallet.vercel.app/
-- Backend: https://arcoinswallet-production.up.railway.app/api
-- Documentación de la API (Swagger): https://arcoinswallet-production.up.railway.app/api-docs
+- Backend: https://arcoins-wallet.onrender.com/api
+- Documentación de la API (Swagger): https://arcoins-wallet.onrender.com/api-docs
 
 ## Desarrolladores
 
@@ -26,7 +26,7 @@ realizar conversiones y registrar movimientos de forma segura y transparente.
 - **Autenticación:** JWT (Bearer).
 - **Inteligencia artificial:** Gemini (Google GenAI) para el asistente.
 - **Tasas de cambio:** ExchangeRate API, con respaldo en la base de datos.
-- **Despliegue:** Vercel (frontend), Railway (backend).
+- **Despliegue:** Vercel (frontend), Render (backend).
 - **Calidad de código:** Vitest + React Testing Library (frontend), Vitest +
   Supertest (backend), Oxlint, MSW para mocks.
 

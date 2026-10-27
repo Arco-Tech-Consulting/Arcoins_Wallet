@@ -7,7 +7,7 @@ graph TD
     end
 
     %% Capa de Servidor / Backend
-    subgraph Servidor [Backend - Railway]
+    subgraph Servidor [Backend - Render]
         API[Express.js + TypeScript API]
         
         %% Módulos del Backend

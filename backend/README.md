@@ -31,7 +31,7 @@ Permite la autenticación de usuarios mediante JWT, administración de saldos mu
 
 - **Node.js 20** o superior
 - **npm** (o gestor compatible)
-- Instancia de **PostgreSQL 14+** (local, Docker, o proveedor en la nube como Railway, Supabase o Neon)
+- Instancia de **PostgreSQL 14+** (local, Docker, o proveedor en la nube como Render, Supabase o Neon)
 - **Google Gemini API Key** (obtenible en Google AI Studio para el endpoint de asistente)
 
 ---
