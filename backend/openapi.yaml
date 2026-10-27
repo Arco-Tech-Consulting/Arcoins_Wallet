@@ -18,8 +18,8 @@ info:
   contact:
     name: Equipo Arcoins Wallet
 servers:
-  - url: https://arcoinswallet-production.up.railway.app
-    description: Servidor de Producción (Railway)
+  - url: https://arcoins-wallet.onrender.com
+    description: Servidor de Producción (Render)
   - url: http://localhost:3000
     description: Servidor Local (Desarrollo)
 

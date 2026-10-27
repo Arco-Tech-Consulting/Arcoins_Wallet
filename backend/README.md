@@ -5,9 +5,9 @@ API REST para la gestión de la billetera digital multi-moneda (**COP / USD / EU
 Permite la autenticación de usuarios mediante JWT, administración de saldos multidivisa, ejecución de transacciones financieras atómicas (depósitos, conversiones compra/venta con tasas en tiempo real y fallback en BD), pagos a comercios, historial de movimientos y un asistente financiero virtual impulsado por Inteligencia Artificial (Google Gemini).
 
 **Servicios en producción:**
-- **API Base:** https://arcoinswallet-production.up.railway.app/api
-- **Documentación Interactiva (Swagger UI):** https://arcoinswallet-production.up.railway.app/api-docs
-- **Healthcheck:** https://arcoinswallet-production.up.railway.app/
+- **API Base:** https://arcoins-wallet.onrender.com/api
+- **Documentación Interactiva (Swagger UI):** https://arcoins-wallet.onrender.com/api-docs
+- **Healthcheck:** https://arcoins-wallet.onrender.com/
 
 ---
 
@@ -229,11 +229,11 @@ La suite cubre:
 
 ## Despliegue
 
-- **Plataforma:** Railway
-- **URL Base:** `https://arcoinswallet-production.up.railway.app`
-- **Build Command:** `npm run build`
+- **Plataforma:** Render
+- **URL Base:** `https://arcoins-wallet.onrender.com`
+- **Build Command:** `npm install --include=dev && npm run build`
 - **Start Command:** `npm start`
-- Las variables de entorno (`DATABASE_URL`, `JWT_SECRET`, `GEMINI_API_KEY`, etc.) se inyectan directamente en el panel de Railway.
+- Las variables de entorno (`DATABASE_URL`, `JWT_SECRET`, `GEMINI_API_KEY`, etc.) se configuran en el panel de Render.
 
 ---
 
