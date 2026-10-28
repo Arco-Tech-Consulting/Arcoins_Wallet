@@ -278,7 +278,10 @@ public async getRates(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const amount = Number(fromAmount);
+      // Validar el monto antes de consultar la tasa de cambio.
+      financialService.validateAmount(fromAmount);
+
+      const amount = fromAmount;
 
       // Tasa real: primero la API externa, con respaldo en PostgreSQL.
       const rateUsed = await this.resolveRate(fromCurrency, toCurrency);

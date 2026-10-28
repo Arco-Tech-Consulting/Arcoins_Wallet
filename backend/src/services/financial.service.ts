@@ -6,7 +6,8 @@ export class FinancialService {
      */
 
     public validateAmount(amount: number): boolean {
-        if (isNaN(amount) || amount <= 0) {
+        //numberisfinite nos permite comprobar que el monto sea un número real y finito
+        if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
             throw new Error('El monto de la transacción debe ser mayor a cero.');
         }
         return true;
@@ -26,16 +27,33 @@ export class FinancialService {
 
     /**
      * Aqui calculamos el monto de destino basado en la tasa de cambio vigente. 
+     * y se rechazan tasas de cambio negativas, Nan e infinitas
      */
 
     public calculateExchange(fromAmount: number, exchangeRate: number):number {
         this.validateAmount(fromAmount);
-        if (exchangeRate <= 0) {
-            throw new Error('La tasa de cambio debe ser mayor a cero.');
+        if (
+            typeof exchangeRate !== 'number' ||
+            !Number.isFinite(exchangeRate) ||
+            exchangeRate <= 0
+        ) {
+            throw new Error('La tasa de cambio debe ser un número finito mayor a cero.');
         }
-        //Redondeamos a 8 decimales para precisión financiera
+
         const calculated = fromAmount * exchangeRate;
-        return Number(calculated.toFixed(8));
+
+        if (!Number.isFinite(calculated) || calculated <= 0) {
+            throw new Error('El resultado de la conversión no es válido.');
+        }
+
+        //Redondeamos a 8 decimales para precisión financiera
+        const rounded = Number(calculated.toFixed(8));
+
+        if (!Number.isFinite(rounded) || rounded <= 0) {
+            throw new Error('El resultado de la conversión no es válido.');
+        }
+
+        return rounded;
     }
 
     /**
@@ -62,6 +80,14 @@ export class FinancialService {
             }
             this.validateAmount(data.from_amount);
             this.validateAmount(data.to_amount);
+
+            if (
+                typeof data.rate_used !== 'number' ||
+                !Number.isFinite(data.rate_used) ||
+                data.rate_used <= 0
+            ) {
+                throw new Error('La tasa de cambio debe ser un número finito mayor a cero.');
+            }
         }
         return true;
     }
