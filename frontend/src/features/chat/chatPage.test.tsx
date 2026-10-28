@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ApiError } from '@/api/client'
 import ChatPanel from './ChatPanel'
@@ -19,6 +19,29 @@ describe('ChatPage', () => {
 
     afterEach(() => {
         cleanup()
+        vi.useRealTimers()
+    })
+
+    it('espera tras un 429 y reintenta sin duplicar el mensaje', async () => {
+        vi.useFakeTimers()
+        mocks.sendChatMessage
+            .mockRejectedValueOnce(new ApiError(429, 'Límite', { retryAfterSeconds: 2 }))
+            .mockResolvedValueOnce({ reply: 'Respuesta después de esperar' })
+        render(<ChatPanel />)
+        fireEvent.change(screen.getByLabelText('Tu mensaje'), { target: { value: 'Hola' } })
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Enviar' })) })
+        expect(screen.getByRole('alert')).toHaveTextContent('Alcanzaste el límite')
+        expect(screen.getByRole('button', { name: 'Reintentar' })).toBeDisabled()
+        fireEvent.change(screen.getByLabelText('Tu mensaje'), { target: { value: 'Otra pregunta' } })
+        expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled()
+        fireEvent.submit(screen.getByRole('button', { name: 'Enviar' }).closest('form')!)
+        expect(mocks.sendChatMessage).toHaveBeenCalledTimes(1)
+        await act(async () => { vi.advanceTimersByTime(2000) })
+        expect(screen.getByRole('button', { name: 'Reintentar' })).toBeEnabled()
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Reintentar' })) })
+        expect(screen.getByText('Respuesta después de esperar')).toBeInTheDocument()
+        expect(screen.getAllByText('Hola')).toHaveLength(1)
+        expect(mocks.sendChatMessage).toHaveBeenLastCalledWith({ message: 'Hola' })
     })
 
     it('envía el mensaje y muestra la respuesta del servicio', async () => {

@@ -31,6 +31,23 @@ app.use(express.json())
 app.use('/api', assistantRoutes)
 
 describe('POST /api/chat', () => {
+    it('bloquea el exceso antes de consultar saldos o Gemini', async () => {
+        mocks.getAssistantReply.mockResolvedValue('Respuesta')
+        const token = jwt.sign({ id: 'usuario-limite' }, TEST_SECRET, { expiresIn: '5m' })
+        for (let i = 0; i < 10; i++) {
+            const result = await request(app).post('/api/chat')
+                .set('Authorization', `Bearer ${token}`).send({ message: 'Hola' })
+            expect(result.status).toBe(200)
+        }
+        mocks.getAssistantFinancialSummary.mockClear()
+        mocks.getAssistantReply.mockClear()
+        const result = await request(app).post('/api/chat')
+            .set('Authorization', `Bearer ${token}`).send({ message: 'Hola', userId: 'otro' })
+        expect(result.status).toBe(429)
+        expect(Number(result.headers['retry-after'])).toBeGreaterThan(0)
+        expect(mocks.getAssistantFinancialSummary).not.toHaveBeenCalled()
+        expect(mocks.getAssistantReply).not.toHaveBeenCalled()
+    })
     beforeEach(() => {
         vi.resetAllMocks()
         vi.stubEnv('JWT_SECRET', TEST_SECRET)

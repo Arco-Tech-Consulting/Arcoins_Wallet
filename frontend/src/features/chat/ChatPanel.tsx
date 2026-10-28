@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/Button'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { sendChatMessage } from '@/api/chat.api'
 import { ApiError } from '@/api/client'
 
@@ -16,6 +16,15 @@ export default function ChatPanel() {
     const [message, setMessage] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const requestInFlight = useRef(false)
+    const cooldownUntil = useRef(0)
+    const [retrySeconds, setRetrySeconds] = useState(0)
+    useEffect(() => {
+        if (retrySeconds <= 0) return
+        const timer = window.setInterval(() => {
+            setRetrySeconds(Math.max(0, Math.ceil((cooldownUntil.current - Date.now()) / 1000)))
+        }, 1000)
+        return () => window.clearInterval(timer)
+    }, [retrySeconds])
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             id: 'welcome',
@@ -29,7 +38,7 @@ export default function ChatPanel() {
         const text = retryText ?? message.trim()
         const isRetry = retryText !== undefined
 
-        if (!text || text.length > 2000 || requestInFlight.current) return
+        if (!text || text.length > 2000 || requestInFlight.current || Date.now() < cooldownUntil.current) return
 
         requestInFlight.current = true
         setIsLoading(true)
@@ -69,6 +78,16 @@ export default function ChatPanel() {
             if (error instanceof ApiError && error.status === 401) {
                 setError('Tu sesión no es válida o ha vencido. Vuelve a iniciar sesión.')
                 setFailedMessage(null)
+            } else if (error instanceof ApiError && error.status === 429) {
+                const payload = error.payload
+                const seconds = typeof payload === 'object' && payload !== null &&
+                    'retryAfterSeconds' in payload && typeof payload.retryAfterSeconds === 'number' &&
+                    Number.isFinite(payload.retryAfterSeconds) && payload.retryAfterSeconds > 0
+                    ? Math.min(3600, Math.ceil(payload.retryAfterSeconds)) : 60
+                cooldownUntil.current = Date.now() + seconds * 1000
+                setRetrySeconds(seconds)
+                setError('Alcanzaste el límite de mensajes. Espera antes de reintentar.')
+                setFailedMessage(text)
             } else if (error instanceof ApiError && error.status === 503) {
                 setError('El asistente no está disponible en este momento. Intenta más tarde.')
                 setFailedMessage(text)
@@ -121,10 +140,11 @@ export default function ChatPanel() {
                     <div className="rounded-xl border border-error/20 bg-error-container/30 p-3">
                         <p role="alert" className="text-sm text-on-error-container">{error}</p>
                         {failedMessage !== null && (
-                            <Button type="button" variant="secondary" className="mt-2" disabled={isLoading} onClick={() => { void handleSend(failedMessage) }}>
+                            <Button type="button" variant="secondary" className="mt-2" disabled={isLoading || retrySeconds > 0} onClick={() => { void handleSend(failedMessage) }}>
                                 Reintentar
                             </Button>
                         )}
+                        {retrySeconds > 0 && <p role="status" className="mt-2 text-xs">Podrás reintentar en {retrySeconds} segundos.</p>}
                     </div>
                 )}
             </div>
@@ -151,7 +171,7 @@ export default function ChatPanel() {
                         type="submit"
                         aria-label={isLoading ? 'Respondiendo…' : 'Enviar'}
                         loading={isLoading}
-                        disabled={!message.trim() || isLoading}
+                        disabled={!message.trim() || isLoading || retrySeconds > 0}
                         className="min-h-11 min-w-11 shrink-0 rounded-xl px-3"
                     >
                         {!isLoading && (

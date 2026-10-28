@@ -679,6 +679,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Límite de 10 solicitudes por minuto por usuario alcanzado (por instancia).
+          headers:
+            Retry-After:
+              description: Segundos que faltan para poder reintentar.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, retryAfterSeconds]
+                properties:
+                  error:
+                    type: string
+                  retryAfterSeconds:
+                    type: integer
+                    minimum: 1
+              example:
+                error: Alcanzaste el límite de mensajes. Espera antes de reintentar.
+                retryAfterSeconds: 60
         "502":
           description: Fallo o respuesta vacía del proveedor de IA
           content:
@@ -688,7 +710,7 @@ paths:
               example:
                 error: No se pudo obtener una respuesta del asistente. Intenta de nuevo.
         "503":
-          description: Configuración del asistente ausente o inválida
+          description: Configuración del asistente ausente o inválida, o capacidad del limitador agotada.
           content:
             application/json:
               schema:
