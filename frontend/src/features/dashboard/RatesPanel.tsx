@@ -3,7 +3,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { formatRate, formatRateTimestamp } from '@/lib/formatters'
 import type { Rate } from '@/types/api'
 
-const PAIR_LABEL: Record<string, string> = {
+export const PAIR_LABEL: Record<string, string> = {
   'USD->COP': 'Dólar → Peso',
   'EUR->COP': 'Euro → Peso',
   'EUR->USD': 'Euro → Dólar',

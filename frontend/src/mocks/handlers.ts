@@ -364,4 +364,34 @@ export const handlers = [
     await delay(200)
     return HttpResponse.json({ data: merchants })
   }),
+
+  // ---------- APIs externas de mercado ----------
+  // Snapshot diario de currency-api (jsDelivr). Los fines de semana no
+  // publican (404), igual que en producción; días hábiles devuelven una
+  // tasa sintética con pequeña variación determinista por fecha.
+  http.get(
+    'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@:date/v1/currencies/:base.json',
+    async ({ params }) => {
+      await delay(60)
+      const { date, base } = params as { date: string; base: string }
+      const day = new Date(`${date}T12:00:00Z`).getUTCDay()
+      if (day === 0 || day === 6) {
+        return new HttpResponse(null, { status: 404 })
+      }
+      // Día de la semana: 1=lunes(T=4) ... y algo determinista por fecha
+      const seed = Number(date.replaceAll('-', '').slice(-2))
+      const usdCop = 4200 + (seed % 20) * 5
+      const eurCop = 4500 + (seed % 15) * 7
+      const eurUsd = 1.05 + ((seed % 8) * 0.01)
+      const baseLower = base.toLowerCase()
+      if (baseLower !== 'usd' && baseLower !== 'eur') {
+        return new HttpResponse(null, { status: 404 })
+      }
+      const rates =
+        baseLower === 'eur'
+          ? { eur: 1, usd: eurUsd, cop: eurCop }
+          : { usd: 1, eur: 1 / eurUsd, cop: usdCop }
+      return HttpResponse.json({ date, [baseLower]: rates })
+    },
+  ),
 ]

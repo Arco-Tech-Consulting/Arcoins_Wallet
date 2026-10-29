@@ -6,6 +6,7 @@ import { LandingNav } from './LandingNav'
 import {
   AssistantSection,
   CurrencyStrip,
+  Differentiators,
   Features,
   FinalCta,
   HowItWorks,
@@ -25,6 +26,7 @@ export default function LandingPage() {
       <main className="flex-1">
         <Hero />
         <CurrencyStrip />
+        <Differentiators />
         <HowItWorks />
         <Features />
         <AssistantSection />
