@@ -1,4 +1,4 @@
-import { formatSymbolAmount } from '@/lib/formatters'
+﻿import { formatSymbolAmount } from '@/lib/formatters'
 import type { CurrencyCode } from '@/types/api'
 
 export interface SampleBalance {
@@ -108,5 +108,38 @@ export const HERO_SAMPLE = {
   buyAmount: formatSymbolAmount(119.61, 'USD'),
   rateLine: '1 USD = $4.180',
 }
+
+export interface PerkRow {
+  concept: string
+  arcoins: string
+  others: string
+}
+
+export const PERKS = {
+  eyebrow: 'Nuestro plus',
+  title: 'Pagas menos por mover tu dinero',
+  description:
+    'Otras billeteras cobran comisión en (casi) todas tus operaciones. En Arcoins lo que fluye gratis es lo que más usas: transferir y pagar. El único cargo es un mínimo al cambiar de moneda.',
+  highlightLabel: 'Arcoins',
+  othersLabel: 'Billeteras digitales comunes',
+  rows: [
+    {
+      concept: 'Transferencias entre usuarios',
+      arcoins: 'Gratis',
+      others: 'Cobran en cada envío y en cada recibido',
+    },
+    {
+      concept: 'Pagos a comercios',
+      arcoins: 'Gratis',
+      others: 'Cobran porcentual por cada pago',
+    },
+    {
+      concept: 'Compra y venta de monedas',
+      arcoins: 'Solo 0.5%',
+      others: '1%–3% y cargos ocultos',
+    },
+  ] satisfies PerkRow[],
+  note: 'Comparación ilustrativa frente a billeteras digitales comunes. El 0.5% aplica únicamente al intercambio entre monedas COP, USD y EUR.',
+} as const
 
 export const COMPANY_NAME = 'Arco Tech Consulting'

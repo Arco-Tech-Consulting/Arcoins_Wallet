@@ -4,6 +4,7 @@ import { ButtonLink } from '@/components/ui/Button'
 import {
   ASSISTANT_DEMO,
   FEATURES,
+  PERKS,
   SAMPLE_BALANCES,
   SECURITY_ITEMS,
   STEPS,
@@ -87,6 +88,96 @@ export function CurrencyStrip() {
         </p>
       </Reveal>
     </section>
+  )
+}
+
+export function Differentiators() {
+  return (
+    <section id="nuestro-plus" className="mx-auto w-full max-w-6xl px-4 py-14">
+      <SectionHeader
+        eyebrow={PERKS.eyebrow}
+        title={PERKS.title}
+        description={PERKS.description}
+      />
+
+      <Reveal delay={0.1}>
+        <div className="mt-10 overflow-x-auto rounded-2xl border border-outline-variant/40 bg-surface-container-low shadow-2xl shadow-black/30">
+          {/* Columnas: concepto | Arcoins | otras billeteras */}
+          <div className="min-w-120">
+            <div className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-outline-variant/40 px-5 py-4 sm:grid-cols-[1fr_1fr_1fr] sm:px-6">
+              <span className="text-xs font-semibold uppercase tracking-widest text-outline">
+                Operación
+              </span>
+              <span className="flex items-center justify-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary sm:px-4">
+                <CheckIcon />
+                {PERKS.highlightLabel}
+              </span>
+              <span className="hidden justify-center text-xs font-medium uppercase tracking-wider text-on-surface-variant/80 sm:flex">
+                {PERKS.othersLabel}
+              </span>
+            </div>
+
+            <ul className="divide-y divide-outline-variant/30">
+              {PERKS.rows.map((row) => (
+                <li
+                  key={row.concept}
+                  className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-[1fr_1fr_1fr] sm:items-center sm:px-6"
+                >
+                  <span className="flex items-center gap-2.5 text-sm font-medium text-on-surface">
+                    <span className="size-1.5 shrink-0 rounded-full bg-secondary" />
+                    {row.concept}
+                  </span>
+                  <span className="sm:hidden">
+                    <PerkBadge value={row.arcoins} other={row.others} />
+                  </span>
+                  <span className="hidden justify-center sm:flex">
+                    <span className="flex items-center gap-2 rounded-lg bg-primary/10 px-3.5 py-2 text-sm font-semibold text-primary">
+                      <CheckIcon />
+                      {row.arcoins}
+                    </span>
+                  </span>
+                  <span className="hidden justify-center text-center text-xs text-on-surface-variant/75 sm:text-sm">
+                    {row.others}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <p className="mt-4 text-center text-xs text-outline">{PERKS.note}</p>
+      </Reveal>
+    </section>
+  )
+}
+
+function PerkBadge({ value, other }: { value: string; other: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-container-lowest px-3 py-2">
+      <span className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+        <CheckIcon />
+        {value}
+      </span>
+      <span className="text-right text-[11px] text-on-surface-variant/80">
+        {other}
+      </span>
+    </div>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-4 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m4.5 12.5 5 5 10-11" />
+    </svg>
   )
 }
 
