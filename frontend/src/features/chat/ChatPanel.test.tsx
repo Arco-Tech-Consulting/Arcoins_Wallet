@@ -12,7 +12,7 @@ vi.mock('@/api/chat.api', () => ({
     sendChatMessage: mocks.sendChatMessage,
 }))
 
-describe('ChatPage', () => {
+describe('ChatPanel', () => {
     beforeEach(() => {
         vi.resetAllMocks()
     })

@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import AuthLayout from '@/layouts/AuthLayout'
 import AppLayout from '@/layouts/AppLayout'
 import ProtectedRoute from '@/router/ProtectedRoute'
@@ -10,7 +10,6 @@ import OperationsPage from '@/features/transactions/OperationsPage'
 import HistoryPage from '@/features/transactions/HistoryPage'
 import DepositPage from '@/features/deposit/DepositPage'
 import PaymentsPage from '@/features/payments/PaymentsPage'
-import ChatPage from '@/features/chat/ChatPage'
 import BudgetPage from '@/features/budget/BudgetPage'
 import TransferPage from '@/features/transfers/TransferPage'
 import NotFoundPage from '@/features/not-found/NotFoundPage'
@@ -38,7 +37,8 @@ export default function App() {
         <Route path="/payments" element={<PaymentsPage />} />
         <Route path="/transfers" element={<TransferPage />} />
         <Route path="/history" element={<HistoryPage />} />
-        <Route path="/chat" element={<ChatPage />} />
+        {/* El asistente vive flotando en AppLayout; la URL antigua redirige */}
+        <Route path="/chat" element={<Navigate to="/dashboard" replace />} />
         <Route path="/budget" element={<BudgetPage />} />
       </Route>
 
