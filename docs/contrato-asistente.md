@@ -51,14 +51,24 @@ HTTP 200
 Códigos HTTP implementados:
 - 400: mensaje inválido.
 - 401: autenticación ausente, inválida o expirada.
+- 429: límite de 10 solicitudes por minuto por usuario alcanzado.
 - 500: error inesperado del servidor.
 - 502: fallo o respuesta vacía del proveedor de IA.
 - 503: configuración del asistente ausente o inválida.
 - 504: tiempo de espera agotado identificado por el servicio.
 
-Pendiente:
-- 429: límite de solicitudes alcanzado. El control de frecuencia
-  todavía no está implementado.
+El límite se aplica después de verificar el JWT y antes de consultar
+el resumen o llamar a Gemini. Cuenta todos los intentos autenticados,
+incluidos los que terminan en error. La respuesta 429 incluye
+Retry-After (segundos) y retryAfterSeconds en el JSON.
+El frontend conserva el mensaje y bloquea el envío y el reintento
+durante esa espera; no realiza reintentos automáticos.
+
+La ventana dura 60 segundos desde el primer intento de cada usuario.
+El almacenamiento es en memoria por instancia, con limpieza de ventanas
+vencidas y un máximo de 10 000 usuarios activos. Si se llena, los usuarios
+nuevos reciben 503 y Retry-After: 60. Reiniciar el proceso reinicia los cupos.
+Antes de escalar a varias réplicas se necesita un almacén compartido.
 
 Los mensajes serán controlados por nuestro backend.
 No se devolverán directamente los errores internos de Gemini.
@@ -66,7 +76,7 @@ No se devolverán directamente los errores internos de Gemini.
 ## Acuerdos pendientes
 - Validar en el entorno desplegado las respuestas con contexto financiero,
 junto con los estados de carga, errores y reintento del frontend.
-- Definir el límite de solicitudes por usuario antes de publicar.
+- Revisar el límite inicial de 10 solicitudes/minuto según la cuota de Gemini.
 
 ## Autenticación y privacidad
 
