@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService, AuthError } from '../services/auth.service';
 import { AuthenticatedRequest } from '../types/auth.types';
+import { requestWelcomeEmail } from '../services/welcome-email.service';
 
 export class AuthController {
   private authService: AuthService;
@@ -27,6 +28,8 @@ export class AuthController {
         lastName,
       });
 
+      // register() has committed and released its DB client. Mail failure must not undo registration.
+      await requestWelcomeEmail(result.user.id);
       res.status(201).json(result);
     } catch (error: any) {
       if (error instanceof AuthError) {
