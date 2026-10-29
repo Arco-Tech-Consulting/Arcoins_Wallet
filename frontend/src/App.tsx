@@ -12,6 +12,7 @@ import DepositPage from '@/features/deposit/DepositPage'
 import PaymentsPage from '@/features/payments/PaymentsPage'
 import ChatPage from '@/features/chat/ChatPage'
 import BudgetPage from '@/features/budget/BudgetPage'
+import TransferPage from '@/features/transfers/TransferPage'
 import NotFoundPage from '@/features/not-found/NotFoundPage'
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/operations" element={<OperationsPage />} />
         <Route path="/deposit" element={<DepositPage />} />
         <Route path="/payments" element={<PaymentsPage />} />
+        <Route path="/transfers" element={<TransferPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/budget" element={<BudgetPage />} />
