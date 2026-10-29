@@ -123,3 +123,11 @@ export interface CheckoutResponse {
   fromAmount: number
   toAmount: number
 }
+
+
+export interface CreateTransferRequest {
+  receiverWalletId: string
+  currency: CurrencyCode
+  amount: number
+  description?: string
+}
