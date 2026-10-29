@@ -12,7 +12,6 @@ import {
 } from '@/lib/formatters'
 import { CURRENCIES, type CurrencyCode } from '@/types/api'
 import { computeTotal, fetchRatesToBase } from './dashboard.utils'
-import { RateHistoryPanel } from './RateHistoryPanel'
 import { RatesPanel } from './RatesPanel'
 import { TotalBalanceCard } from './TotalBalanceCard'
 
@@ -189,14 +188,8 @@ export default function DashboardPage() {
         </p>
       </Card>
 
-      <RatesPanel
-        rates={marketQuery.data ?? []}
-        loading={marketQuery.isLoading}
-        error={marketQuery.isError}
-      />
-
-      {/* Tendencia de los últimos 7 días (datos del mercado, sin JWT) */}
-      <RateHistoryPanel />
+      {/* Sección única: tasa viva + tendencia de 7 días expandible */}
+      <RatesPanel />
     </div>
   )
 }
