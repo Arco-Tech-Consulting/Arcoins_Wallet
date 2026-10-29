@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { type Socket } from 'socket.io-client'
-import { connectSocket, disconnectSocket, getSocket } from '@/socket/socket.client'
+import { connectSocket, disconnectSocket } from '@/socket/socket.client'
 import { queryClient } from '@/lib/queryClient'
 import { useAuth } from './AuthContext'
 
@@ -93,4 +93,3 @@ export function useSocket(): SocketContextValue {
   }
   return context
 }
-
