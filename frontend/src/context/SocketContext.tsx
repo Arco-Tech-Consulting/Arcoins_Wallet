@@ -21,11 +21,22 @@ export interface TransferNotification {
   createdAt: string
 }
 
+/** Máximo de notificaciones retenidas en memoria durante la sesión */
+const MAX_NOTIFICATIONS = 30
+
 interface SocketContextValue {
   /** La última notificación de transferencia recibida (null si no hay ninguna) */
   lastTransferNotification: TransferNotification | null
+  /** Historial de notificaciones de la sesión (las más nuevas primero) */
+  notifications: TransferNotification[]
+  /** Cantidad de notificaciones aún no vistas por el usuario */
+  unreadCount: number
   /** Limpia la notificación (para que el componente la descarte tras mostrarla) */
   clearTransferNotification: () => void
+  /** Marca todas las notificaciones del centro como leídas */
+  markNotificationsAsRead: () => void
+  /** Borra todo el historial de notificaciones de la sesión */
+  clearNotifications: () => void
 }
 
 const SocketContext = createContext<SocketContextValue | undefined>(undefined)
@@ -41,10 +52,14 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null)
   const [lastTransferNotification, setLastTransferNotification] =
     useState<TransferNotification | null>(null)
+  const [notifications, setNotifications] = useState<TransferNotification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     if (!isAuthenticated) {
-      // Si el usuario no está autenticado (o hizo logout), desconectamos
+      // Si el usuario no está autenticado (o hizo logout), desconectamos.
+      // El historial del centro de notificaciones se limpia al remontar
+      // el provider (ver key={isAuthenticated ? 'auth' : 'anon'} en main.tsx)
       disconnectSocket()
       socketRef.current = null
       return
@@ -57,11 +72,17 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     /**
      * Cuando llega una transferencia:
      * 1. Guardamos la notificación en el estado (para mostrar el toast)
-     * 2. Invalidamos la cache de saldos para que React Query los vuelva a pedir
-     * 3. Invalidamos el historial de transacciones
+     * 2. La agregamos al historial del centro de notificaciones
+     * 3. Invalidamos la cache de saldos para que React Query los vuelva a pedir
+     * 4. Invalidamos el historial de transacciones
      */
     const handleTransferReceived = (data: TransferNotification) => {
       setLastTransferNotification(data)
+      setNotifications((prev) =>
+        [data, ...prev.filter((n) => n.transferGroupId !== data.transferGroupId)]
+          .slice(0, MAX_NOTIFICATIONS),
+      )
+      setUnreadCount((count) => count + 1)
       void queryClient.invalidateQueries({ queryKey: ['balances'] })
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })
     }
@@ -77,9 +98,25 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     setLastTransferNotification(null)
   }, [])
 
+  const markNotificationsAsRead = useCallback(() => {
+    setUnreadCount(0)
+  }, [])
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([])
+    setUnreadCount(0)
+  }, [])
+
   return (
     <SocketContext.Provider
-      value={{ lastTransferNotification, clearTransferNotification }}
+      value={{
+        lastTransferNotification,
+        notifications,
+        unreadCount,
+        clearTransferNotification,
+        markNotificationsAsRead,
+        clearNotifications,
+      }}
     >
       {children}
     </SocketContext.Provider>

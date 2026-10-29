@@ -2,12 +2,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactElement } from 'react'
 import { AuthProvider } from '@/context/AuthContext'
+import { SocketProvider } from '@/context/SocketContext'
 import { DEMO_TOKEN } from '@/mocks/handlers'
 import App from '@/App'
 import AppLayout from '@/layouts/AppLayout'
+
+// Evitamos conexiones socket.io reales en jsdom: basta con un socket borrador
+vi.mock('@/socket/socket.client', () => ({
+  connectSocket: () => ({ on: vi.fn(), off: vi.fn() }),
+  disconnectSocket: vi.fn(),
+}))
 
 const NAV_LABELS = [
   'Dashboard',
@@ -15,7 +22,6 @@ const NAV_LABELS = [
   'Depósito',
   'Pagos',
   'Historial',
-  'Asistente',
   'Presupuesto',
 ]
 
@@ -150,7 +156,9 @@ function renderWithProviders(ui: ReactElement, route: string) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
-        <AuthProvider>{ui}</AuthProvider>
+        <AuthProvider>
+          <SocketProvider>{ui}</SocketProvider>
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -165,12 +173,14 @@ function renderAppLayout() {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/dashboard']}>
         <AuthProvider>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<div>contenido</div>} />
-              <Route path="/deposit" element={<div>contenido</div>} />
-            </Route>
-          </Routes>
+          <SocketProvider>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<div>contenido</div>} />
+                <Route path="/deposit" element={<div>contenido</div>} />
+              </Route>
+            </Routes>
+          </SocketProvider>
         </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>,
