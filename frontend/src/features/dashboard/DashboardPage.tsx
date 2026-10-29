@@ -188,11 +188,8 @@ export default function DashboardPage() {
         </p>
       </Card>
 
-      <RatesPanel
-        rates={marketQuery.data ?? []}
-        loading={marketQuery.isLoading}
-        error={marketQuery.isError}
-      />
+      {/* Sección única: tasa viva + tendencia de 7 días expandible */}
+      <RatesPanel />
     </div>
   )
 }

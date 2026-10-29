@@ -69,6 +69,23 @@ describe('LandingPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('resalta el plus diferencial: gratis en transferencias y pagos, 0.5% al cambiar monedas', () => {
+    renderWithProviders(<App />, '/')
+
+    expect(
+      screen.getByRole('heading', { name: 'Pagas menos por mover tu dinero' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Transferencias entre usuarios'),
+    ).toBeInTheDocument()
+    // "Gratis" se renderiza en escritorio y en el layout móvil (2×2)
+    expect(screen.getAllByText('Gratis').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('Solo 0.5%').length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getByText(/Comparación ilustrativa frente a billeteras digitales comunes/),
+    ).toBeInTheDocument()
+  })
+
   it('redirige al dashboard cuando ya hay sesión', async () => {
     localStorage.setItem('arcoins.token', DEMO_TOKEN)
     renderWithProviders(<App />, '/')
