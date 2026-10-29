@@ -4,7 +4,8 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
 import App from './App.tsx'
-import { AuthProvider } from '@/context/AuthContext'
+import { AuthProvider, useAuth } from '@/context/AuthContext'
+import { SocketProvider } from '@/context/SocketContext'
 import { queryClient } from '@/lib/queryClient'
 import './index.css'
 
@@ -16,6 +17,19 @@ async function enableMocking() {
   return worker.start({ onUnhandledFrame: 'bypass' })
 }
 
+/**
+ * Remonta SocketProvider al iniciar/cerrar sesión (ver key), respetando
+ * el orden AuthProvider -> SocketProvider -> App
+ */
+function SessionProviders() {
+  const { isAuthenticated } = useAuth()
+  return (
+    <SocketProvider key={isAuthenticated ? 'auth' : 'anon'}>
+      <App />
+    </SocketProvider>
+  )
+}
+
 void enableMocking().then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
@@ -24,7 +38,10 @@ void enableMocking().then(() => {
           <QueryClientProvider client={queryClient}>
             <BrowserRouter>
               <AuthProvider>
-                <App />
+                {/* SocketProvider va dentro de AuthProvider para poder
+                    leer isAuthenticated y conectar/desconectar el socket
+                    según el estado de sesión del usuario */}
+                <SessionProviders />
               </AuthProvider>
             </BrowserRouter>
           </QueryClientProvider>

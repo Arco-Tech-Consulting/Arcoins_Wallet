@@ -1,6 +1,8 @@
 # Contrato de correos de Arcoins
 
-Estado: borrador pendiente de coordinación.
+Estado: bienvenida implementada localmente con pruebas simuladas.
+Pendiente: aplicar migración, configurar Vercel/AWS SES y validar entrega real.
+La confirmación de transacciones aún no está implementada.
 Responsable: Chary.
 
 ## Tecnología requerida
@@ -15,6 +17,21 @@ Datos mínimos:
 - Correo del usuario registrado.
 
 Es un correo informativo. No verifica la dirección de correo.
+
+Implementación: proyecto Vercel separado en `notifications/`, con
+`POST /api/welcome`, autenticado con secreto exclusivo del backend.
+La petición contiene únicamente `eventId` (ID del usuario registrado).
+La función obtiene el correo desde PostgreSQL; no lo acepta del navegador.
+El evento se guarda junto con el registro, antes del COMMIT, cuando
+`WELCOME_EMAIL_ENABLED=true`. Se solicita el envío después del COMMIT.
+
+El estado reside en `welcome_email_events`: pending, sending, sent o uncertain.
+Hay un evento por usuario; una reclamación atómica evita envíos concurrentes.
+No hay reintentos automáticos de SES. Los resultados inciertos requieren revisión.
+Un fallo de correo posterior al registro mantiene la cuenta y la respuesta 201.
+La migración debe aplicarse antes de habilitar el envío.
+
+Configuración y operación: `notifications/README.md`.
 
 ## Confirmación de transacción
 Enviar únicamente después de confirmar y guardar la operación.
@@ -63,7 +80,8 @@ Queda pendiente acordar el almacenamiento y control de duplicados.
 Un fallo de correo no debe deshacer una transacción exitosa.
 Registrar el estado del envío sin guardar credenciales.
 Utilizar el identificador del evento para controlar duplicados.
-Acordar dónde se guardará ese estado antes de implementar.
+Para bienvenida, el estado se guarda en PostgreSQL. Para transacciones,
+el almacenamiento y el flujo de reintento siguen pendientes.
 
 ## Seguridad y pruebas
 La función de correo solo aceptará llamadas autorizadas del backend.
@@ -71,7 +89,6 @@ El navegador no elegirá destinatarios ni enviará correos directamente.
 Durante el desarrollo se utilizarán destinatarios de prueba.
 
 ## Acuerdos pendientes
-- Marcos: evento de registro y configuración del envío.
+- Marcos/equipo: aplicar migración y configurar secretos, SES y el proyecto Vercel de notificaciones.
 - Fabián: momento de confirmación y datos de cada transacción.
-- Equipo: ubicación de Vercel Functions y almacenamiento del estado
-  de las notificaciones.
+- Equipo: validar recepción del correo de bienvenida con un destinatario de prueba.
