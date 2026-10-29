@@ -6,6 +6,7 @@ import { Brand } from '@/components/ui/Brand'
 import { Button } from '@/components/ui/Button'
 import { Drawer } from '@/components/ui/Drawer'
 import FloatingAssistant from '@/features/chat/FloatingAssistant'
+import { TransferToast } from '@/components/TransferToast'
 
 interface NavItem {
   to: string
@@ -17,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/operations', label: 'Operaciones' },
   { to: '/deposit', label: 'Depósito' },
   { to: '/payments', label: 'Pagos' },
+  { to: '/transfers', label: 'Transferencias' },
   { to: '/history', label: 'Historial' },
   { to: '/chat', label: 'Asistente' },
   { to: '/budget', label: 'Presupuesto' },
@@ -147,6 +149,9 @@ export default function AppLayout() {
       </m.main>
 
       {user && <FloatingAssistant key={user.id} />}
+
+      {/* Toast de notificación en tiempo real para transferencias recibidas */}
+      <TransferToast />
     </div>
   )
 }

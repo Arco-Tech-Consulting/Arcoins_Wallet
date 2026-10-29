@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react'
 import App from './App.tsx'
 import { AuthProvider } from '@/context/AuthContext'
+import { SocketProvider } from '@/context/SocketContext'
 import { queryClient } from '@/lib/queryClient'
 import './index.css'
 
@@ -24,7 +25,12 @@ void enableMocking().then(() => {
           <QueryClientProvider client={queryClient}>
             <BrowserRouter>
               <AuthProvider>
-                <App />
+                {/* SocketProvider va dentro de AuthProvider para poder
+                    leer isAuthenticated y conectar/desconectar el socket
+                    según el estado de sesión del usuario */}
+                <SocketProvider>
+                  <App />
+                </SocketProvider>
               </AuthProvider>
             </BrowserRouter>
           </QueryClientProvider>

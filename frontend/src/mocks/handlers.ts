@@ -4,6 +4,7 @@ import type {
   ChatResponse,
   CreatePaymentRequest,
   CreateTransactionRequest,
+  CreateTransferRequest,
   CurrencyCode,
   LoginRequest,
   PaginatedTransactions,
@@ -267,6 +268,44 @@ export const handlers = [
     }
     transactions.unshift(transaction)
     return HttpResponse.json({ success: true, transaction })
+  }),
+
+  http.post<never, CreateTransferRequest>('/api/transfers', async ({ request }) => {
+    const unauthorized = requireAuth(request)
+    if (unauthorized) return unauthorized
+    await delay(300)
+    const body = await request.json()
+
+    if (!body.receiverWalletId || !body.currency || !body.amount || body.amount <= 0) {
+      return HttpResponse.json(
+        { success: false, error: 'Todos los campos son obligatorios y el monto debe ser mayor a 0.' },
+        { status: 400 },
+      )
+    }
+
+    const balance = balances.find((b) => b.currency === body.currency)
+    if (!balance || balance.amount < body.amount) {
+      return HttpResponse.json(
+        {
+          success: false,
+          error: 'Fondos insuficientes para completar la transferencia.',
+        },
+        { status: 400 },
+      )
+    }
+    balance.amount -= body.amount
+
+    const transaction: Transaction = {
+      id: `tx_${Date.now()}`,
+      type: 'transfer_out',
+      status: 'completed',
+      fromCurrency: body.currency,
+      fromAmount: body.amount,
+      description: body.description ?? `Transferencia a ${body.receiverWalletId.slice(0, 8)}...`,
+      createdAt: new Date().toISOString(),
+    }
+    transactions.unshift(transaction)
+    return HttpResponse.json({ success: true, transaction, transferGroupId: `grp_${Date.now()}` }, { status: 201 })
   }),
 
   http.post<never, { to_currency: CurrencyCode; to_amount: number; description?: string }>(
