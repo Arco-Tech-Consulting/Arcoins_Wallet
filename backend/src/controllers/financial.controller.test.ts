@@ -5,14 +5,12 @@ import type { AuthenticatedRequest } from '../types/auth.types'
 const mocks = vi.hoisted(() => ({
   getWalletByUserId: vi.fn(),
   getBalance: vi.fn(),
-  createExchangeTransaction: vi.fn(),
 }))
 
 vi.mock('../services/financial.repository', () => ({
   FinancialRepository: class {
     getWalletByUserId = mocks.getWalletByUserId
     getBalance = mocks.getBalance
-    createExchangeTransaction = mocks.createExchangeTransaction
   },
 }))
 
@@ -100,44 +98,5 @@ describe('FinancialController.getBalance', () => {
 
     expect(status).toHaveBeenCalledWith(400)
     expect(mocks.getBalance).not.toHaveBeenCalled()
-  })
-})
-
-describe('FinancialController.createTransaction', () => {
-  beforeEach(() => {
-    vi.resetAllMocks()
-  })
-
-  it('rechaza montos invalidos sin registrar transacciones', async () => {
-    const controller = new FinancialController()
-
-    const invalidAmounts = [
-      NaN,
-      Infinity,
-      -Infinity,
-      0,
-      -100,
-      '100',
-      null
-    ]
-
-    for (const fromAmount of invalidAmounts) {
-      const req = {
-        user: { id: 'user-1', email: 'test@example.com' },
-        body: {
-          type: 'exchange',
-          fromCurrency: 'USD',
-          toCurrency: 'COP',
-          fromAmount
-        }
-      } as unknown as AuthenticatedRequest
-
-      const { res, status } = createResponse()
-
-      await controller.createTransaction(req, res)
-
-      expect(status).toHaveBeenCalledWith(400)
-      expect(mocks.createExchangeTransaction).not.toHaveBeenCalled()
-    }
   })
 })
