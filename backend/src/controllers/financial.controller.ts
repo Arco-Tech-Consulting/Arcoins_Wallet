@@ -12,7 +12,10 @@ export class FinancialController {
    * Obtiene el saldo de un usuario para una moneda dada.
    * * GET /api/financial/balance/:walletId/:currency
    */
-  public async getBalance(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async getBalance(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
       const { walletId, currency } = req.params;
       const userId = req.user?.id;
@@ -76,13 +79,18 @@ export class FinancialController {
   /**Procesa un deposito en la cuenta
    *POST /api/financial/deposit
    */
-  public async deposit(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async deposit(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
       const { to_currency, to_amount, description } = req.body;
       const userId = req.user?.id || req.body.user_id;
 
       if (!userId) {
-        res.status(401).json({ success: false, error: "Usuario no autenticado" });
+        res
+          .status(401)
+          .json({ success: false, error: "Usuario no autenticado" });
         return;
       }
 
@@ -111,13 +119,17 @@ export class FinancialController {
    * Obtiene los saldos de la billetera adaptado al contrato frontend
    * GET /api/wallet/balances
    */
-  public async getWalletBalances(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async getWalletBalances(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
-
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({ success: false, error: 'Usuario no autenticado'});
+        res
+          .status(401)
+          .json({ success: false, error: "Usuario no autenticado" });
         return;
       }
 
@@ -125,7 +137,9 @@ export class FinancialController {
       const wallet = await financialRepository.getWalletByUserId(userId);
 
       if (!wallet) {
-        res.status(404).json({ success: false, error: 'Billetera no encontrada'});
+        res
+          .status(404)
+          .json({ success: false, error: "Billetera no encontrada" });
         return;
       }
 
@@ -133,9 +147,10 @@ export class FinancialController {
       const balances = await financialRepository.getWalletBalances(wallet.id);
 
       res.status(200).json({ data: balances });
-
     } catch (error: any) {
-      res.status(500).json({ success: false, error: 'Error al consultar los saldos' });
+      res
+        .status(500)
+        .json({ success: false, error: "Error al consultar los saldos" });
     }
   }
 
@@ -143,93 +158,104 @@ export class FinancialController {
    * Obtiene la información básica de la billetera asaptado al contrato frontend
    * GET/api/wallet
    */
-  public async getWallet(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async getWallet(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
-
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({ success: false, error: 'Usuario no autenticado'});
+        res
+          .status(401)
+          .json({ success: false, error: "Usuario no autenticado" });
         return;
       }
 
       const wallet = await financialRepository.getWalletByUserId(userId);
 
       if (!wallet) {
-        res.status(404).json({ success: false, error: 'Billetera no encontrada'});
+        res
+          .status(404)
+          .json({ success: false, error: "Billetera no encontrada" });
         return;
       }
 
       res.status(200).json({ id: wallet.id });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: 'Error al consultar la billetera'});
+      res
+        .status(500)
+        .json({ success: false, error: "Error al consultar la billetera" });
     }
   }
 
   //Metodo para obtener tazas
   // Método para obtener tasas de cambio
-public async getRates(req: Request, res: Response): Promise<void> {
-  try {
-    const base = String(req.query.base || "USD").toUpperCase();
-    const target = String(req.query.target || "COP").toUpperCase();
-
-    // Validacion de códigos de moneda
-    if (!/^[A-Z]{3}$/.test(base) || !/^[A-Z]{3}$/.test(target)) {
-      res.status(400).json({
-        success: false,
-        error: "Los códigos de moneda deben tener 3 letras"
-      });
-      return;
-    }
-
+  public async getRates(req: Request, res: Response): Promise<void> {
     try {
-      // Consultar tasa actualizada desde ExchangeRate-API
-      const rateData = await exchangeRateService.getExchangeRate(
+      const base = String(req.query.base || "USD").toUpperCase();
+      const target = String(req.query.target || "COP").toUpperCase();
+
+      // Validacion de códigos de moneda
+      if (!/^[A-Z]{3}$/.test(base) || !/^[A-Z]{3}$/.test(target)) {
+        res.status(400).json({
+          success: false,
+          error: "Los códigos de moneda deben tener 3 letras",
+        });
+        return;
+      }
+
+      try {
+        // Consultar tasa actualizada desde ExchangeRate-API
+        const rateData = await exchangeRateService.getExchangeRate(
+          base,
+          target
+        );
+
+        res.status(200).json(rateData);
+        return;
+      } catch (apiError) {
+        console.warn(
+          "ExchangeRate-API no disponible. Consultando PostgreSQL.",
+          apiError
+        );
+      }
+
+      // Respaldo: consultar última tasa almacenada en PostgreSQL
+      const storedRate = await financialRepository.getExchangeRate(
         base,
         target
       );
 
-      res.status(200).json(rateData);
-      return;
+      if (!storedRate) {
+        res.status(503).json({
+          success: false,
+          error: "No hay tasas de cambio disponibles",
+        });
+        return;
+      }
 
-    } catch (apiError) {
-      console.warn(
-        "ExchangeRate-API no disponible. Consultando PostgreSQL.",
-        apiError
-      );
-    }
-
-    // Respaldo: consultar última tasa almacenada en PostgreSQL
-    const storedRate = await financialRepository.getExchangeRate(
-      base,
-      target
-    );
-
-    if (!storedRate) {
-      res.status(503).json({
+      res.status(200).json(storedRate);
+    } catch (error: any) {
+      res.status(500).json({
         success: false,
-        error: "No hay tasas de cambio disponibles"
+        error: "Error al consultar las tasas de cambio",
       });
-      return;
     }
-
-    res.status(200).json(storedRate);
-
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: "Error al consultar las tasas de cambio"
-    });
   }
-}
 
   //Se obtiene el hsitorial de transacciones
-  public async getTransactions(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async getTransactions(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({ success: false, error: 'Usuario no autenticado'});
+        res
+          .status(401)
+          .json({ success: false, error: "Usuario no autenticado" });
 
         return;
       }
@@ -237,11 +263,11 @@ public async getRates(req: Request, res: Response): Promise<void> {
       const { type, currency, from, to, page } = req.query;
 
       const result = await financialRepository.getTransactions(userId, {
-        type: typeof type === 'string' ? type : undefined,
-        currency: typeof currency === 'string' ? currency : undefined,
-        from: typeof from === 'string' ? from : undefined,
-        to: typeof to === 'string' ? to : undefined,
-        page: typeof page === 'string' ? page : undefined
+        type: typeof type === "string" ? type : undefined,
+        currency: typeof currency === "string" ? currency : undefined,
+        from: typeof from === "string" ? from : undefined,
+        to: typeof to === "string" ? to : undefined,
+        page: typeof page === "string" ? page : undefined,
       });
 
       res.status(200).json({ data: result });
@@ -278,7 +304,10 @@ public async getRates(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const amount = Number(fromAmount);
+      // Validar el monto antes de consultar la tasa de cambio.
+      financialService.validateAmount(fromAmount);
+
+      const amount = fromAmount;
 
       // Tasa real: primero la API externa, con respaldo en PostgreSQL.
       const rateUsed = await this.resolveRate(fromCurrency, toCurrency);
@@ -336,7 +365,12 @@ public async getRates(req: Request, res: Response): Promise<void> {
       toCurrency
     );
 
-    if (!storedRate || storedRate.rate <= 0) {
+    if (
+      !storedRate ||
+      typeof storedRate.rate !== "number" ||
+      !Number.isFinite(storedRate.rate) ||
+      storedRate.rate <= 0
+    ) {
       throw new Error("No hay tasas de cambio disponibles");
     }
 
