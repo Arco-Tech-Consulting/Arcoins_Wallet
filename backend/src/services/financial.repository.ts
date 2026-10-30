@@ -1,6 +1,8 @@
+import BigNumber from "bignumber.js";
+import { FinancialService } from "./financial.service";
 import { off } from "cluster";
 import { pool } from "../config/db";
-import { PoolClient } from "pg";  //Esto nos permitirá tipar correctamente una conexión individual a PostgreSQL.
+import { PoolClient } from "pg"; //Esto nos permitirá tipar correctamente una conexión individual a PostgreSQL.
 
 export class FinancialRepository {
   /**
@@ -71,7 +73,13 @@ export class FinancialRepository {
 
   public async getTransactions(
     userId: string,
-    filters: { type?: string; currency?: string; from?: string; to?: string; page?: string }
+    filters: {
+      type?: string;
+      currency?: string;
+      from?: string;
+      to?: string;
+      page?: string;
+    }
   ) {
     const page = Number(filters.page || 1);
 
@@ -164,26 +172,84 @@ export class FinancialRepository {
     const wallet = await this.getWalletByUserId(data.user_id);
 
     if (!wallet) {
-      throw new Error('Billetera no encontrada');
+      throw new Error("Billetera no encontrada");
     }
+
+    const isConversion = ["buy", "sell", "exchange"].includes(data.type);
+
+    if (isConversion) {
+      if (
+        typeof data.from_amount !== "number" ||
+        !Number.isFinite(data.from_amount) ||
+        data.from_amount <= 0 ||
+        !data.from_currency ||
+        !data.to_currency ||
+        data.from_currency === data.to_currency
+      ) {
+        throw new Error("Datos inválidos para la conversión.");
+      }
+    }
+
+    const financialService = new FinancialService();
+
+    if (data.from_amount != null) {
+      financialService.validateAmount(data.from_amount);
+    }
+
+    if (data.to_amount != null) {
+      financialService.validateAmount(data.to_amount);
+    }
+
+    if (isConversion) {
+      const expectedAmount = financialService.calculateExchange(
+        data.from_amount!,
+        data.rate_used!
+      );
+
+      if (data.to_amount !== expectedAmount) {
+        throw new Error('El monto de destino no coincide con la tasa de cambio.');
+      }
+    }
+
+    const commission = isConversion
+      ?  financialService.calculateCommission(data.from_amount!)
+      : 0;
 
     return this.executeInTransaction(async (client) => {
       if (data.from_currency && data.from_amount && data.from_amount > 0) {
+        const totalDebit = new BigNumber(data.from_amount.toString())
+          .plus(new BigNumber(commission.toString()))
+          .decimalPlaces(2, BigNumber.ROUND_HALF_UP)
+          .toFixed(2);
+
+        if (
+          !new BigNumber(totalDebit).isFinite() ||
+          new BigNumber(totalDebit).isGreaterThan("999999999999.99")
+        ) {
+          throw new Error("El monto total supera el límite permitido.");
+        }
+
         const currentBalance = await this.getBalanceForUpdate(
           client,
           wallet.id,
           data.from_currency
         );
 
-        if (currentBalance < data.from_amount) {
-          throw new Error('Fondos insuficientes para completar la transacción.');
+        if (
+          new BigNumber(currentBalance).isLessThan(
+            new BigNumber(totalDebit.toString())
+          )
+        ) {
+          throw new Error(
+            "Fondos insuficientes para completar la transacción."
+          );
         }
 
         await this.adjustBalance(
           client,
           wallet.id,
           data.from_currency,
-          -data.from_amount
+          new BigNumber(totalDebit).negated().toFixed(2)
         );
       }
 
@@ -196,7 +262,25 @@ export class FinancialRepository {
         );
       }
 
-      return this.insertTransaction(client, data);
+      const transaction = await this.insertTransaction(client, {
+        ...data,
+        fee_amount: isConversion ? commission : null,
+        fee_currency: isConversion ? data.from_currency : null,
+        fee_rate: isConversion ? 0.005 : null,
+      });
+
+      if (isConversion) {
+        await client.query(
+          `INSERT INTO commission_revenues (
+      transaction_id,
+      currency,
+      amount
+    ) VALUES ($1, $2, $3)`,
+          [transaction.id, data.from_currency, commission]
+        );
+      }
+
+      return transaction;
     });
   }
 
@@ -208,14 +292,14 @@ export class FinancialRepository {
     client: PoolClient,
     walletId: string,
     currency: string
-  ): Promise<number> {
+  ): Promise<string> {
     const query = `
       SELECT amount FROM wallet_balances
       WHERE wallet_id = $1 AND currency = $2
       FOR UPDATE;
     `;
     const result = await client.query(query, [walletId, currency]);
-    return result.rows.length > 0 ? parseFloat(result.rows[0].amount) : 0;
+    return result.rows.length > 0 ? String(result.rows[0].amount) : "0";
   }
 
   /**
@@ -225,7 +309,7 @@ export class FinancialRepository {
     client: PoolClient,
     walletId: string,
     currency: string,
-    delta: number
+    delta: number | string
   ): Promise<void> {
     // PostgreSQL evalúa el CHECK "amount >= 0" sobre la fila propuesta del
     // INSERT ANTES de resolver el ON CONFLICT. Por eso el valor provisional
@@ -257,28 +341,45 @@ export class FinancialRepository {
       rate_timestamp?: Date | null;
       merchant_id?: string | null;
       description?: string | null;
+      fee_amount?: number | string | null;
+      fee_currency?: string | null;
+      fee_rate?: number | null;
     }
   ) {
-    const isConversion = ['buy', 'sell', 'exchange'].includes(data.type);
+    const isConversion = ["buy", "sell", "exchange"].includes(data.type);
 
     const query = `
-      INSERT INTO transactions (
-        user_id,
-        type,
-        from_currency,
-        to_currency,
-        from_amount,
-        to_amount,
-        rate_used,
-        rate_timestamp,
-        merchant_id,
-        description,
-        status,
-        created_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'completed', NOW())
-      RETURNING id, type, status, from_currency, to_currency, from_amount, to_amount, rate_used, rate_timestamp, description, created_at;
-    `;
+INSERT INTO transactions (
+  user_id,
+  type,
+  from_currency,
+  to_currency,
+  from_amount,
+  to_amount,
+  rate_used,
+  rate_timestamp,
+  merchant_id,
+  description,
+  fee_amount,
+  fee_currency,
+  fee_rate,
+  status,
+  created_at
+)
+VALUES (
+  $1, $2, $3, $4, $5,
+  $6, $7, $8, $9, $10,
+  $11, $12, $13,
+  'completed', NOW()
+)
+RETURNING
+  id, type, status,
+  from_currency, to_currency,
+  from_amount, to_amount,
+  rate_used, rate_timestamp,
+  fee_amount, fee_currency, fee_rate,
+  description, created_at;
+`;
 
     const values = [
       data.user_id,
@@ -313,6 +414,9 @@ export class FinancialRepository {
       rateTimestamp: row.rate_timestamp,
       description: row.description,
       createdAt: row.created_at,
+      feeAmount: row.fee_amount != null ? Number(row.fee_amount) : null,
+      feeCurrency: row.fee_currency ?? null,
+      feeRate: row.fee_rate != null ? Number(row.fee_rate) : null,
     };
   }
 
@@ -346,36 +450,37 @@ export class FinancialRepository {
   }) {
     return this.applyTransaction({
       user_id: data.user_id,
-      type: 'payment',
+      type: "payment",
       from_currency: data.currency,
       from_amount: data.amount,
       merchant_id: data.merchantId,
-      description: data.description || 'Pago a comercio',
+      description: data.description || "Pago a comercio",
     });
   }
 
   /**
- * Ejecuta una operación dentro de una transacción SQL.
- * Si ocurre un error, revierte todos los cambios.
- */
+   * Ejecuta una operación dentro de una transacción SQL.
+   * Si ocurre un error, revierte todos los cambios.
+   */
 
-  public async executeInTransaction<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
-
+  public async executeInTransaction<T>(
+    operation: (client: PoolClient) => Promise<T>
+  ): Promise<T> {
     const client = await pool.connect(); //con pool.connect() Obtenemos una conexion exclusiva del pool.
 
     try {
-      await client.query('BEGIN'); //con BEGIN iniciamos la transaccion
+      await client.query("BEGIN"); //con BEGIN iniciamos la transaccion
 
       const result = await operation(client); //Con operation(client) ejecutamos consultas usando misma conexion.
 
-      await client.query('COMMIT'); //Con COMMIT confirmamos los cambios cuando todo termina correctamente.
+      await client.query("COMMIT"); //Con COMMIT confirmamos los cambios cuando todo termina correctamente.
 
-      return result
+      return result;
     } catch (error) {
       try {
-        await client.query('ROLLBACK'); //ROLLBACK nos revierte cambios en caso de error.
+        await client.query("ROLLBACK"); //ROLLBACK nos revierte cambios en caso de error.
       } catch (rollbackError) {
-        console.error('Error al revertir la transacción:', rollbackError);
+        console.error("Error al revertir la transacción:", rollbackError);
       }
 
       throw error;
