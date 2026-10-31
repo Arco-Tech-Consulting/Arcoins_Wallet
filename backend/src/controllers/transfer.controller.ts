@@ -80,20 +80,23 @@ export class TransferController {
         description,
       });
 
-      await Promise.all([
+      // Notifications are secondary: a committed transfer must remain successful.
+      try {
+        emitToUser(result.receiverUserId, 'transfer_received', {
+          transferGroupId: result.transferGroupId,
+          currency: normalizedCurrency,
+          amount: numericAmount,
+          description: result.receiverTransaction.description,
+          createdAt: result.receiverTransaction.createdAt,
+        });
+      } catch {
+        console.warn('[transfer] No se pudo emitir la notificación en tiempo real.');
+      }
+
+      await Promise.allSettled([
         requestTransactionEmail(userId, result.senderTransaction.id),
         requestTransactionEmail(result.receiverUserId, result.receiverTransaction.id),
       ]);
-
-      // Notificamos al receptor en tiempo real vía Socket.io
-      // Esto ocurre DESPUÉS del COMMIT, por lo que el dinero ya está acreditado
-      emitToUser(result.receiverUserId, 'transfer_received', {
-        transferGroupId: result.transferGroupId,
-        currency: normalizedCurrency,
-        amount: numericAmount,
-        description: result.receiverTransaction.description,
-        createdAt: result.receiverTransaction.createdAt,
-      });
 
       // Respondemos al emisor con la transacción de salida
       res.status(201).json({

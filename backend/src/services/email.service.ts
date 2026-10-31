@@ -1,5 +1,6 @@
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2'
 import type { QueryConfig } from 'pg'
+import { waitForEmailSlot } from './email.pacing'
 import { pool } from '../config/db'
 import { welcomeTemplate, transactionTemplate } from './email.templates'
 
@@ -38,6 +39,8 @@ async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) =
             if (abort.signal.aborted) throw new Error('Mail timeout')
             if (!mail) return false
             if (!emailPattern.test(mail.to)) throw new Error('Invalid recipient')
+            await waitForEmailSlot(abort.signal)
+            abort.signal.throwIfAborted()
             client = new SESv2Client({ region, maxAttempts: 1 })
             const response = await client.send(new SendEmailCommand({
                 FromEmailAddress: from,
@@ -72,7 +75,7 @@ export function requestWelcomeEmail(userId: string): Promise<boolean> {
 
 export function requestTransactionEmail(userId: string, transactionId: string): Promise<boolean> {
     return deliver('transaction', async (appUrl) => {
-        const result = await mailQuery( `SELECT t.*, u.email FROM transactions t
+        const result = await mailQuery(`SELECT t.*, u.email FROM transactions t
                 JOIN users u ON u.id = t.user_id
                 WHERE t.id = $1 AND t.user_id = $2 AND t.status = 'completed'`,
             [transactionId, userId],
