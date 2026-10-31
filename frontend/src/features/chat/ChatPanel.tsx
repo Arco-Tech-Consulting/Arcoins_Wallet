@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/Button'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { sendChatMessage } from '@/api/chat.api'
 import { ApiError } from '@/api/client'
 
@@ -10,7 +10,8 @@ type ChatMessage = {
     text: string
 }
 
-export default function ChatPanel() {
+export default function ChatPanel({ isOpen = true }: { isOpen?: boolean }) {
+    const conversationRef = useRef<HTMLDivElement>(null)
     const [error, setError] = useState<string | null>(null)
     const [failedMessage, setFailedMessage] = useState<string | null>(null)
     const [message, setMessage] = useState('')
@@ -33,6 +34,12 @@ export default function ChatPanel() {
         },
     ])
 
+
+    useLayoutEffect(() => {
+        if (!isOpen) return
+        const container = conversationRef.current
+        if (container) container.scrollTop = container.scrollHeight
+    }, [messages, isLoading, error, isOpen])
 
     async function handleSend(retryText?: string) {
         const text = retryText ?? message.trim()
@@ -107,7 +114,7 @@ export default function ChatPanel() {
 
     return (
         <div className="flex h-[min(540px,calc(100dvh-12rem))] min-h-0 flex-col">
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4">
+            <div ref={conversationRef} data-testid="chat-scroll" className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4">
                 <p className="rounded-xl border border-primary/10 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-on-surface-variant">
                     Al enviar un mensaje, compartes con Gemini tu mensaje, saldos y hasta
                     10 movimientos recientes para recibir orientación educativa.

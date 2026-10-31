@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../types/auth.types';
 import { TransferRepository } from '../services/transfer.repository';
+import { requestTransactionEmail } from '../services/email.service';
 import { emitToUser } from '../socket/socket.service';
 
 const transferRepository = new TransferRepository();
@@ -78,6 +79,11 @@ export class TransferController {
         amount: numericAmount,
         description,
       });
+
+      await Promise.all([
+        requestTransactionEmail(userId, result.senderTransaction.id),
+        requestTransactionEmail(result.receiverUserId, result.receiverTransaction.id),
+      ]);
 
       // Notificamos al receptor en tiempo real vía Socket.io
       // Esto ocurre DESPUÉS del COMMIT, por lo que el dinero ya está acreditado

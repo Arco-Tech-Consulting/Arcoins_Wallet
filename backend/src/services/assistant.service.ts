@@ -39,62 +39,55 @@ export async function getAssistantReply(
 
     const client = new GoogleGenAI({
         apiKey: config.apiKey,
-        httpOptions: {
-            timeout: config.timeoutMs,
-        },
+        httpOptions: { timeout: config.timeoutMs, retryOptions: { attempts: 1 } },
     })
-
-    const response = await client.models.generateContent({
-        model: config.model,
-        contents: summary
-            ? JSON.stringify({
-                message,
-                financialSummary: summary,
+    const models = [config.model, ...(config.fallbackModels ?? [])]
+    const contents = summary ? JSON.stringify({ message, financialSummary: summary }) : message
+    for (let index = 0; index < models.length; index++) {
+        const controller = new AbortController()
+        let timer: ReturnType<typeof setTimeout> | undefined
+        let timedOut = false
+        try {
+            const timeout = new Promise<never>((_, reject) => {
+                timer = setTimeout(() => {
+                    timedOut = true
+                    controller.abort()
+                    reject(new Error('Assistant request timeout'))
+                }, config.timeoutMs)
             })
-            : message,
-        config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-        },
-    }).catch((error: unknown) => {
-        const details =
-            typeof error === 'object' && error !== null
-                ? (error as Record<string, unknown>)
-                : {}
-
-        const status =
-            typeof details.status === 'number'
-                ? details.status
-                : typeof details.statusCode === 'number'
-                    ? details.statusCode
-                    : null
-
-        console.error('[assistant] Fallo de Gemini', {
-            name: error instanceof Error ? error.name : 'UnknownError',
-            status,
-        })
-        if (
-            error instanceof Error &&
-            error.name === 'APIConnectionTimeoutError'
-        ) {
+            const response = await Promise.race([
+                client.models.generateContent({
+                    model: models[index], contents,
+                    config: { systemInstruction: SYSTEM_INSTRUCTION, abortSignal: controller.signal },
+                }),
+                timeout,
+            ])
+            const reply = response.text?.trim()
+            if (!reply) {
+                // Do not switch models to bypass blocked/empty responses.
+                throw new AssistantError('EMPTY_RESPONSE', 'El asistente no devolvió una respuesta de texto.')
+            }
+            return reply
+        } catch (error: unknown) {
+            if (error instanceof AssistantError) throw error
+            const details = typeof error === 'object' && error !== null
+                ? error as Record<string, unknown> : {}
+            const status = typeof details.status === 'number' ? details.status
+                : typeof details.statusCode === 'number' ? details.statusCode : null
+            const name = error instanceof Error ? error.name : 'UnknownError'
+            const isTimeout = timedOut || name === 'APIConnectionTimeoutError' || name === 'TimeoutError'
+            const canFallback = isTimeout || status === 404 || status === 408 ||
+                (status !== null && status >= 500 && status <= 599)
+            console.error('[assistant] Fallo de Gemini', { name, status, model: models[index] })
+            if (canFallback && index < models.length - 1) continue
             throw new AssistantError(
-                'TIMEOUT',
-                'El asistente tardó demasiado en responder. Intenta nuevamente.',
+                isTimeout ? 'TIMEOUT' : 'PROVIDER_ERROR',
+                isTimeout ? 'El asistente tardó demasiado en responder. Intenta nuevamente.'
+                    : 'El asistente no está disponible. Intenta más tarde.',
             )
+        } finally {
+            if (timer !== undefined) clearTimeout(timer)
         }
-
-        throw new AssistantError(
-            'PROVIDER_ERROR',
-            'El asistente no está disponible. Intenta más tarde.',
-        )
-    })
-    const reply = response.text?.trim()
-
-    if (!reply) {
-        throw new AssistantError(
-            'EMPTY_RESPONSE',
-            'El asistente no devolvió una respuesta de texto.',
-        )
     }
-
-    return reply
+    throw new AssistantError('PROVIDER_ERROR', 'El asistente no está disponible. Intenta más tarde.')
 }

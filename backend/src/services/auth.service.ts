@@ -121,14 +121,6 @@ export class AuthService {
         [walletId]
       );
 
-      // Persist the event in the same transaction as the account. No mail is sent here.
-      if (process.env.WELCOME_EMAIL_ENABLED === 'true') {
-        await client.query(
-          'INSERT INTO welcome_email_events (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING',
-          [user.id],
-        );
-      }
-
       const userResponse: UserResponse = {
         id: user.id,
         firstName: user.first_name,

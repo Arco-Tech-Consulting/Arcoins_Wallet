@@ -1,5 +1,6 @@
 export interface GeminiConfig {
     apiKey: string
+    fallbackModels: string[]
     model: string
     timeoutMs: number
 }
@@ -23,5 +24,10 @@ export function getGeminiConfig(
         throw new Error('GEMINI_TIMEOUT_MS debe ser un entero positivo.')
     }
 
-    return { apiKey, model, timeoutMs }
+    const fallbackModels = [...new Set((env.GEMINI_FALLBACK_MODELS ?? '')
+        .split(',').map((name) => name.trim()).filter((name) => name && name !== model))]
+    if (fallbackModels.length > 2) {
+        throw new Error('Configura como máximo dos modelos de respaldo.')
+    }
+    return { apiKey, model, fallbackModels, timeoutMs }
 }

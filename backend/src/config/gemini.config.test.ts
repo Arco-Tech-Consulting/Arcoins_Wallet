@@ -12,6 +12,7 @@ describe('getGeminiConfig', () => {
         expect(getGeminiConfig(validEnv)).toEqual({
             apiKey: 'clave-ficticia-para-pruebas',
             model: 'modelo-de-prueba',
+            fallbackModels: [],
             timeoutMs: 15000,
         })
     })
@@ -62,4 +63,12 @@ describe('getGeminiConfig', () => {
             ).toThrow('GEMINI_TIMEOUT_MS debe ser un entero positivo.')
         },
     )
+})
+it('normaliza respaldos sin duplicados ni el principal', () => {
+    expect(getGeminiConfig({ GEMINI_API_KEY: 'test', GEMINI_MODEL: 'a',
+        GEMINI_FALLBACK_MODELS: ' a, b, b, ,c ' }).fallbackModels).toEqual(['b', 'c'])
+})
+it('rechaza más de dos respaldos', () => {
+    expect(() => getGeminiConfig({ GEMINI_API_KEY: 'test', GEMINI_MODEL: 'a',
+        GEMINI_FALLBACK_MODELS: 'b,c,d' })).toThrow('como máximo dos')
 })
