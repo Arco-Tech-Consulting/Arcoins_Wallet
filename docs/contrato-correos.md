@@ -18,7 +18,10 @@ No incluyen contraseñas, tokens, descripciones libres ni datos de la contrapart
 
 Cada envío tiene un plazo total de cinco segundos, incluida la consulta del destinatario.
 La respuesta de la API puede esperar ese plazo; el fallo del correo no revierte la
-operación. Ambos correos de una transferencia se intentan en paralelo.
+operación. Los avisos de una transferencia se solicitan juntos, pero los envíos a SES
+se espacian al menos 1,1 segundos por proceso para el entorno de pruebas.
+La espera para el turno forma parte del plazo de cinco segundos. Bajo carga se puede
+descartar un envío; no es una cola persistente ni un límite compartido entre réplicas.
 Un intento por correo, sin reintentos automáticos. SES aceptado no garantiza recepción.
 No se guarda historial ni se garantiza recuperación tras reinicios o ausencia de duplicados
 si se invoca nuevamente el envío. Un timeout puede ocurrir después de que SES lo acepte.
@@ -40,7 +43,7 @@ No aplicar 001_welcome_email_events.sql: fue retirada junto al sistema anterior.
 1. Subir y desplegar esta versión del backend con ambos interruptores false.
 2. Configurar las variables en Render y comprobar permisos ses:SendEmail para el remitente.
 3. En SES sandbox verificar también cada destinatario de prueba. Las cuotas de sandbox
-   limitan los envíos; dos correos paralelos pueden ser rechazados si superan la tasa permitida.
+   limitan los envíos; otros procesos o réplicas que compartan la cuenta pueden superar la tasa permitida.
 4. Activar bienvenida y registrar una cuenta nueva con destinatario verificado.
 5. Revisar bandeja/spam y logs genéricos [email]; nunca repetir una operación financiera
    real solo porque no llegó el correo.
