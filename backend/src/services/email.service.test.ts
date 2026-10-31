@@ -95,6 +95,24 @@ describe('correo directo SES', () => {
         await Promise.resolve(); await Promise.resolve()
         expect(mocks.send).not.toHaveBeenCalled()
     })
+    it.each([
+        ['AccessDeniedException', 'private key', 'AccessDeniedException'],
+        ['MessageRejected', 'Email address is not verified: owner@example.com', 'IDENTITY_NOT_VERIFIED'],
+        ['CredentialsProviderError', 'private key', 'CredentialsProviderError'],
+        ['TooManyRequestsException', 'private key', 'TooManyRequestsException'],
+        ['private key', 'owner@example.com', 'UNKNOWN_ERROR'],
+    ])('diagnostica %s sin revelar información privada', async (name, message, reason) => {
+        const error = new Error(message)
+        error.name = name
+        mocks.send.mockRejectedValue(error)
+        expect(await requestWelcomeEmail('u1')).toBe(false)
+        expect(console.warn).toHaveBeenCalledWith(expect.any(String), {
+            kind: 'welcome', stage: 'ses_send', reason,
+        })
+        const logs = JSON.stringify(vi.mocked(console.warn).mock.calls)
+        expect(logs).not.toContain('private key')
+        expect(logs).not.toContain('owner@example.com')
+    })
     it('escapa HTML y omite descripciones libres', () => {
         const result = transactionTemplate({ ...tx, id: '<script>bad</script>' }, 'https://app.example.com')
         expect(result.html).not.toContain('<script>')

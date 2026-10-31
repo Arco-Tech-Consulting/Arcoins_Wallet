@@ -13,6 +13,23 @@ function mailQuery(text: string, values: string[]) {
 const emailPattern = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/
 type Mail = { to: string; subject: string; text: string; html: string }
 
+// Only known error names are logged; never provider messages or arbitrary fields.
+const diagnosticNames = new Set([
+    'AccessDeniedException', 'AccessDenied', 'MessageRejected',
+    'MailFromDomainNotVerifiedException', 'TooManyRequestsException',
+    'AccountSuspendedException', 'SendingPausedException',
+    'CredentialsProviderError', 'InvalidClientTokenId', 'UnrecognizedClientException',
+    'SignatureDoesNotMatch', 'ExpiredToken', 'ExpiredTokenException',
+    'TimeoutError', 'AbortError',
+])
+function diagnosticReason(error: unknown): string {
+    if (!(error instanceof Error)) return 'UNKNOWN_ERROR'
+    if (error.name === 'MessageRejected' && /not verified/i.test(error.message)) {
+        return 'IDENTITY_NOT_VERIFIED'
+    }
+    return diagnosticNames.has(error.name) ? error.name : 'UNKNOWN_ERROR'
+}
+
 // Best effort, one attempt, after COMMIT. Never rejects into a business operation.
 async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) => Promise<Mail | null>): Promise<boolean> {
     const enabled = kind === 'welcome' ? process.env.WELCOME_EMAIL_ENABLED : process.env.TRANSACTION_EMAIL_ENABLED
@@ -20,6 +37,8 @@ async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) =
     const abort = new AbortController()
     let client: SESv2Client | undefined
     let timer: ReturnType<typeof setTimeout> | undefined
+    let stage = 'configuration'
+    let timedOut = false
     try {
         const region = process.env.AWS_REGION?.trim()
         const from = process.env.SES_FROM_EMAIL?.trim()
@@ -29,18 +48,23 @@ async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) =
         }
         const timeout = new Promise<never>((_, reject) => {
             timer = setTimeout(() => {
+                timedOut = true
                 abort.abort()
                 reject(new Error('Mail timeout'))
             }, TIMEOUT_MS)
         })
         const attempt = async () => {
+            stage = 'load_message'
             const mail = await load(url.origin)
             // A DB lookup finishing after the deadline must never start a late send.
             if (abort.signal.aborted) throw new Error('Mail timeout')
             if (!mail) return false
+            stage = 'recipient_validation'
             if (!emailPattern.test(mail.to)) throw new Error('Invalid recipient')
+            stage = 'pacing'
             await waitForEmailSlot(abort.signal)
             abort.signal.throwIfAborted()
+            stage = 'ses_send'
             client = new SESv2Client({ region, maxAttempts: 1 })
             const response = await client.send(new SendEmailCommand({
                 FromEmailAddress: from,
@@ -50,14 +74,17 @@ async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) =
                     Body: { Text: { Data: mail.text, Charset: 'UTF-8' }, Html: { Data: mail.html, Charset: 'UTF-8' } },
                 } },
             }), { abortSignal: abort.signal })
+            stage = 'ses_confirmation'
             if (!response.MessageId) throw new Error('No acceptance confirmation')
             console.info('[email] SES aceptó el correo', { kind })
             return true
         }
         return await Promise.race([attempt(), timeout])
-    } catch {
+    } catch (error: unknown) {
         // No recipient, credentials, content or provider error bodies in logs.
-        console.warn('[email] Envío no confirmado; la operación sigue guardada.', { kind })
+        console.warn('[email] Envío no confirmado; la operación sigue guardada.', {
+            kind, stage, reason: timedOut ? 'TIMEOUT' : diagnosticReason(error),
+        })
         return false
     } finally {
         if (timer !== undefined) clearTimeout(timer)
