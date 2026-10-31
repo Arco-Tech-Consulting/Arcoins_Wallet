@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
+import { parse } from 'yaml';
 import path from 'path';
 import fs from 'fs';
 
@@ -21,7 +21,7 @@ let swaggerDocument: any = null;
 
 if (openApiPath) {
   try {
-    swaggerDocument = YAML.load(openApiPath);
+    swaggerDocument = parse(fs.readFileSync(openApiPath, 'utf8'));
   } catch (error) {
     console.error('Error al cargar el archivo openapi.yaml:', error);
   }
