@@ -68,7 +68,7 @@ export default function FloatingAssistant() {
             </svg>
           </button>
         </header>
-        <ChatPanel />
+        <ChatPanel isOpen={isOpen} />
       </section>
       <div className="flex justify-end">
         <button

@@ -4,6 +4,8 @@ import { FinancialRepository } from "../services/financial.repository";
 import { AuthenticatedRequest } from "../types/auth.types";
 import { exchangeRateService } from "../services/exchange-rate.service";
 
+import { requestTransactionEmail } from '../services/email.service';
+
 const financialService = new FinancialService();
 const financialRepository = new FinancialRepository();
 
@@ -85,7 +87,7 @@ export class FinancialController {
   ): Promise<void> {
     try {
       const { to_currency, to_amount, description } = req.body;
-      const userId = req.user?.id || req.body.user_id;
+      const userId = req.user?.id;
 
       if (!userId) {
         res
@@ -109,6 +111,7 @@ export class FinancialController {
         description: description || "Depósito en saldo",
       });
 
+      await requestTransactionEmail(userId, transaction.id);
       res.status(201).json({ success: true, transaction });
     } catch (error: any) {
       res.status(400).json({ success: false, error: error.message });
@@ -333,6 +336,7 @@ export class FinancialController {
         description: `${type.toUpperCase()} de ${fromCurrency} a ${toCurrency}`,
       });
 
+      await requestTransactionEmail(userId, transaction.id);
       res.status(200).json({ transaction });
     } catch (error: any) {
       res.status(400).json({ success: false, error: error.message });
@@ -413,6 +417,7 @@ export class FinancialController {
         description,
       });
 
+      await requestTransactionEmail(userId, transaction.id);
       res.status(201).json({ transaction });
     } catch (error: any) {
       res.status(400).json({ success: false, error: error.message });

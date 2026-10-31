@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService, AuthError } from '../services/auth.service';
 import { AuthenticatedRequest } from '../types/auth.types';
-import { requestWelcomeEmail } from '../services/welcome-email.service';
+import { requestWelcomeEmail } from '../services/email.service';
 
 export class AuthController {
   private authService: AuthService;

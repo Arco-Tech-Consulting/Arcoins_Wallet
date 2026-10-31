@@ -177,3 +177,21 @@ describe('ChatPanel', () => {
         expect(screen.getByLabelText('Tu mensaje')).toBeEnabled()
     })
 })
+
+it('desplaza al enviar, recibir y volver a abrir', async () => {
+    let respond!: (value: { reply: string }) => void
+    mocks.sendChatMessage.mockImplementationOnce(() => new Promise((resolve) => { respond = resolve }))
+    const { rerender } = render(<ChatPanel />)
+    const scroll = screen.getByTestId('chat-scroll')
+    Object.defineProperty(scroll, 'scrollHeight', { configurable: true, value: 800 })
+    fireEvent.change(screen.getByLabelText('Tu mensaje'), { target: { value: 'Hola' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar' }))
+    expect(scroll.scrollTop).toBe(800)
+    Object.defineProperty(scroll, 'scrollHeight', { configurable: true, value: 1100 })
+    await act(async () => { respond({ reply: 'Respuesta nueva' }) })
+    expect(scroll.scrollTop).toBe(1100)
+    rerender(<ChatPanel isOpen={false} />)
+    scroll.scrollTop = 0
+    rerender(<ChatPanel isOpen />)
+    expect(scroll.scrollTop).toBe(1100)
+})

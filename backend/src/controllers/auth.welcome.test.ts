@@ -1,41 +1,35 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Request, Response } from 'express'
-const mocks = vi.hoisted(() => ({ register: vi.fn() }))
+const mocks = vi.hoisted(() => ({ register: vi.fn(), mail: vi.fn() }))
 vi.mock('../services/auth.service', () => ({
-    AuthService: class { register = mocks.register },
-    AuthError: class extends Error {},
+    AuthService: class { register = mocks.register }, AuthError: class extends Error {},
 }))
+vi.mock('../services/email.service', () => ({ requestWelcomeEmail: mocks.mail }))
 import { AuthController } from './auth.controller'
-
+function response() {
+    const res = { status: vi.fn(), json: vi.fn() }
+    res.status.mockReturnValue(res)
+    return res
+}
 describe('bienvenida después del registro', () => {
-    beforeEach(() => {
-        vi.resetAllMocks()
-        vi.stubEnv('WELCOME_EMAIL_ENABLED', 'true')
-        vi.stubEnv('WELCOME_EMAIL_ENDPOINT', 'https://notifications.example.com/api/welcome')
-        vi.stubEnv('WELCOME_EMAIL_SECRET', 's'.repeat(32))
-        vi.spyOn(console, 'warn').mockImplementation(() => {})
-        vi.spyOn(console, 'error').mockImplementation(() => {})
-    })
-    afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
-    it('mantiene HTTP 201 y el token si el correo falla', async () => {
-        const result = { user: { id: 'u1', email: 'registered@example.com' }, token: 'jwt-test' }
+    beforeEach(() => vi.resetAllMocks())
+    it('usa el usuario guardado y conserva HTTP 201 cuando el envío no se confirma', async () => {
+        const result = { user: { id: 'u1', email: 'saved@example.com' }, token: 'jwt-test' }
         mocks.register.mockResolvedValue(result)
-        const fetchMock = vi.fn().mockRejectedValue(new Error('SES down'))
-        vi.stubGlobal('fetch', fetchMock)
-        const res = { status: vi.fn(), json: vi.fn() }
-        res.status.mockReturnValue(res)
-        await new AuthController().register({ body: { email: 'different@example.com' } } as Request, res as unknown as Response)
+        mocks.mail.mockResolvedValue(false)
+        const res = response()
+        await new AuthController().register({ body: { email: 'other@example.com', userId: 'u2' } } as Request, res as unknown as Response)
+        expect(mocks.mail).toHaveBeenCalledExactlyOnceWith('u1')
+        expect(mocks.register.mock.invocationCallOrder[0]).toBeLessThan(mocks.mail.mock.invocationCallOrder[0])
         expect(res.status).toHaveBeenCalledWith(201)
         expect(res.json).toHaveBeenCalledWith(result)
-        expect(fetchMock).toHaveBeenCalledWith(expect.any(URL), expect.objectContaining({ body: '{"eventId":"u1"}' }))
     })
-    it('no solicita correo si falla el registro', async () => {
+    it('no envía al fallar el registro', async () => {
         mocks.register.mockRejectedValue(new Error('DB failed'))
-        const fetchMock = vi.fn()
-        vi.stubGlobal('fetch', fetchMock)
-        const res = { status: vi.fn(), json: vi.fn() }
-        res.status.mockReturnValue(res)
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const res = response()
         await new AuthController().register({ body: {} } as Request, res as unknown as Response)
-        expect(fetchMock).not.toHaveBeenCalled()
+        expect(mocks.mail).not.toHaveBeenCalled()
+        spy.mockRestore()
     })
 })

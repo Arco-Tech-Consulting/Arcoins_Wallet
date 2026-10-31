@@ -5,7 +5,7 @@ vi.mock('../config/db', () => ({ pool: { query: mocks.query, connect: mocks.conn
 vi.mock('bcryptjs', () => ({ default: { hash: vi.fn().mockResolvedValue('hash') } }))
 import { AuthService } from './auth.service'
 
-describe('evento de bienvenida dentro del registro', () => {
+describe('registro independiente de tablas de correo', () => {
     const dto = { email: 'test@example.com', password: 'Password1!', firstName: 'Ana', lastName: 'Prueba' }
     beforeEach(() => {
         vi.clearAllMocks()
@@ -20,26 +20,12 @@ describe('evento de bienvenida dentro del registro', () => {
         })
     })
     afterEach(() => vi.unstubAllEnvs())
-    it('guarda un evento por usuario antes del COMMIT', async () => {
+    it('confirma la cuenta sin consultar tablas de correo aun cuando está habilitado', async () => {
         const result = await new AuthService().register(dto)
         expect(result.user.email).toBe(dto.email)
-        const calls = mocks.clientQuery.mock.calls
-        const event = calls.findIndex(([sql]) => sql.includes('INSERT INTO welcome_email_events'))
-        const commit = calls.findIndex(([sql]) => sql === 'COMMIT')
-        expect(event).toBeGreaterThan(-1)
-        expect(event).toBeLessThan(commit)
-        expect(calls[event]?.[1]).toEqual(['u1'])
+        expect(mocks.clientQuery.mock.calls.some(([sql]) => sql.includes('welcome_email_events'))).toBe(false)
+        expect(mocks.clientQuery).toHaveBeenCalledWith('COMMIT')
         expect(mocks.release).toHaveBeenCalledOnce()
-    })
-    it('revierte cuenta y evento si no puede persistir el evento', async () => {
-        const impl = mocks.clientQuery.getMockImplementation()!
-        mocks.clientQuery.mockImplementation(async (sql: string, ...args: unknown[]) => {
-            if (sql.includes('INSERT INTO welcome_email_events')) throw new Error('DB unavailable')
-            return impl(sql, ...args)
-        })
-        await expect(new AuthService().register(dto)).rejects.toThrow('DB unavailable')
-        expect(mocks.clientQuery).toHaveBeenCalledWith('ROLLBACK')
-        expect(mocks.clientQuery).not.toHaveBeenCalledWith('COMMIT')
     })
     it('mantiene el registro actual cuando el correo está deshabilitado', async () => {
         vi.stubEnv('WELCOME_EMAIL_ENABLED', 'false')

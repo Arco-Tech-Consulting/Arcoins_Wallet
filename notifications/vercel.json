@@ -1,5 +1,0 @@
-{
-  "functions": {
-    "api/welcome.ts": { "maxDuration": 30 }
-  }
-}

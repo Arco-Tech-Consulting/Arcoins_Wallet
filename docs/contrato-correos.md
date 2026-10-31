@@ -1,94 +1,52 @@
-# Contrato de correos de Arcoins
+# Correos de Arcoins: envío directo con AWS SES
 
-Estado: bienvenida implementada localmente con pruebas simuladas.
-Pendiente: aplicar migración, configurar Vercel/AWS SES y validar entrega real.
-La confirmación de transacciones aún no está implementada.
-Responsable: Chary.
+Responsable: Chary. Implementación local; pendiente despliegue y prueba real.
+No requiere tablas nuevas ni migraciones de correo. La migración 002 de comisiones
+es independiente y sigue siendo responsabilidad del módulo financiero.
 
-## Tecnología requerida
-Vercel Functions y SDK de AWS SES.
-Las credenciales se configurarán exclusivamente en el servidor.
+## Funcionamiento
+El backend espera el COMMIT exitoso del registro o la operación y entonces solicita
+el correo. Un servicio común consulta el destinatario en users por ID; para movimientos
+consulta transactions por ID y propietario, únicamente con status completed.
+Nunca utiliza un destinatario elegido por React ni el correo del JWT.
 
-## Bienvenida
-Enviar después de que el registro se haya guardado correctamente.
+Bienvenida informativa (no verifica la dirección). Confirmaciones para depósitos,
+compra/venta/conversión, pagos y transferencias. En transferencias se intenta un
+correo al emisor y otro al receptor usando sus respectivos movimientos guardados.
+Los mensajes incluyen referencia, fecha UTC, montos y monedas, y comisión si existe.
+No incluyen contraseñas, tokens, descripciones libres ni datos de la contraparte.
 
-Datos mínimos:
-- Identificador único del evento.
-- Correo del usuario registrado.
+Cada envío tiene un plazo total de cinco segundos, incluida la consulta del destinatario.
+La respuesta de la API puede esperar ese plazo; el fallo del correo no revierte la
+operación. Ambos correos de una transferencia se intentan en paralelo.
+Un intento por correo, sin reintentos automáticos. SES aceptado no garantiza recepción.
+No se guarda historial ni se garantiza recuperación tras reinicios o ausencia de duplicados
+si se invoca nuevamente el envío. Un timeout puede ocurrir después de que SES lo acepte.
+No existe cron, cola ni comando de reenvío de pendientes.
 
-Es un correo informativo. No verifica la dirección de correo.
+## Configurar en Render (servicio backend)
+- AWS_REGION: us-east-1, la misma región de la identidad verificada.
+- AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY: credenciales privadas del usuario IAM de envío.
+- SES_FROM_EMAIL: dirección exacta verificada y autorizada en IAM.
+- ARCOINS_APP_URL: https://arcoinswallet.vercel.app
+- WELCOME_EMAIL_ENABLED: false durante configuración; true para activar bienvenida.
+- TRANSACTION_EMAIL_ENABLED: false durante configuración; true para activar confirmaciones.
 
-Implementación: proyecto Vercel separado en `notifications/`, con
-`POST /api/welcome`, autenticado con secreto exclusivo del backend.
-La petición contiene únicamente `eventId` (ID del usuario registrado).
-La función obtiene el correo desde PostgreSQL; no lo acepta del navegador.
-El evento se guarda junto con el registro, antes del COMMIT, cuando
-`WELCOME_EMAIL_ENABLED=true`. Se solicita el envío después del COMMIT.
+No requiere WELCOME_EMAIL_ENDPOINT, WELCOME_EMAIL_SECRET ni un proyecto adicional en Vercel.
+No copiar credenciales al frontend, Git, capturas ni chat. El SDK usa las variables AWS estándar.
+No aplicar 001_welcome_email_events.sql: fue retirada junto al sistema anterior.
 
-El estado reside en `welcome_email_events`: pending, sending, sent o uncertain.
-Hay un evento por usuario; una reclamación atómica evita envíos concurrentes.
-No hay reintentos automáticos de SES. Los resultados inciertos requieren revisión.
-Un fallo de correo posterior al registro mantiene la cuenta y la respuesta 201.
-La migración debe aplicarse antes de habilitar el envío.
+## Activación y prueba
+1. Subir y desplegar esta versión del backend con ambos interruptores false.
+2. Configurar las variables en Render y comprobar permisos ses:SendEmail para el remitente.
+3. En SES sandbox verificar también cada destinatario de prueba. Las cuotas de sandbox
+   limitan los envíos; dos correos paralelos pueden ser rechazados si superan la tasa permitida.
+4. Activar bienvenida y registrar una cuenta nueva con destinatario verificado.
+5. Revisar bandeja/spam y logs genéricos [email]; nunca repetir una operación financiera
+   real solo porque no llegó el correo.
+6. Activar confirmaciones y probar en entorno de pruebas depósito/conversión/pago/transferencia
+   con usuarios verificados. Confirmar que los montos y destinatarios corresponden a cada dueño.
+7. Solicitar acceso de producción de SES para enviar a destinatarios no verificados.
 
-Configuración y operación: `notifications/README.md`.
-
-## Confirmación de transacción
-Enviar únicamente después de confirmar y guardar la operación.
-
-Datos mínimos:
-- Identificador único del evento.
-- Identificador de la transacción.
-- Correo del propietario, obtenido por el backend.
-- Tipo de operación.
-- Montos y monedas involucradas.
-- Fecha y hora de la operación.
-
-No incluir contraseñas, tokens ni datos personales innecesarios.
-
-## Relación con el contrato de transacciones
-
-Referencia: frontend/docs/api-contract.md.
-
-La notificación se solicitará desde el backend después de confirmar
-la escritura de la operación en la base de datos y comprobar que
-su estado sea completed.
-
-No se enviará confirmación de éxito para operaciones pending o failed.
-
-Campos de referencia:
-- id: identificador de la transacción.
-- type: tipo de operación.
-- status: estado.
-- fromCurrency y fromAmount: moneda y monto de origen, si corresponden.
-- toCurrency y toAmount: moneda y monto de destino, si corresponden.
-- createdAt: fecha y hora en formato ISO 8601.
-
-Las monedas se representarán en mayúsculas: COP, USD y EUR.
-Los campos que no correspondan a la operación se omitirán del correo.
-
-El destinatario se obtendrá en el backend a partir del propietario
-de la operación. No se aceptará un destinatario elegido por React.
-
-Propuesta de identificador del evento:
-transaction.completed:<id de la transacción>
-
-Ese identificador permitirá reconocer reintentos del mismo evento.
-Queda pendiente acordar el almacenamiento y control de duplicados.
-
-## Fallos y duplicados
-Un fallo de correo no debe deshacer una transacción exitosa.
-Registrar el estado del envío sin guardar credenciales.
-Utilizar el identificador del evento para controlar duplicados.
-Para bienvenida, el estado se guarda en PostgreSQL. Para transacciones,
-el almacenamiento y el flujo de reintento siguen pendientes.
-
-## Seguridad y pruebas
-La función de correo solo aceptará llamadas autorizadas del backend.
-El navegador no elegirá destinatarios ni enviará correos directamente.
-Durante el desarrollo se utilizarán destinatarios de prueba.
-
-## Acuerdos pendientes
-- Marcos/equipo: aplicar migración y configurar secretos, SES y el proyecto Vercel de notificaciones.
-- Fabián: momento de confirmación y datos de cada transacción.
-- Equipo: validar recepción del correo de bienvenida con un destinatario de prueba.
+Si falla el correo, desactivar su interruptor y revisar configuración, permisos y cuotas.
+La cuenta y los movimientos ya confirmados permanecen válidos.
