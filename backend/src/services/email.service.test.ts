@@ -106,12 +106,51 @@ describe('correo directo SES', () => {
         error.name = name
         mocks.send.mockRejectedValue(error)
         expect(await requestWelcomeEmail('u1')).toBe(false)
-        expect(console.warn).toHaveBeenCalledWith(expect.any(String), {
+        expect(console.warn).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
             kind: 'welcome', stage: 'ses_send', reason,
-        })
+        }))
         const logs = JSON.stringify(vi.mocked(console.warn).mock.calls)
         expect(logs).not.toContain('private key')
         expect(logs).not.toContain('owner@example.com')
+    })
+    it.each([
+        ['because no identity-based policy allows the ses:SendEmail action', 'IDENTITY_POLICY', 'NO_ALLOW'],
+        ['with an explicit deny in a service control policy', 'SERVICE_CONTROL_POLICY', 'EXPLICIT_DENY'],
+        ['with an explicit deny in a permissions boundary', 'PERMISSIONS_BOUNDARY', 'EXPLICIT_DENY'],
+    ])('clasifica la denegación sin copiar el mensaje: %s', async (suffix, policyType, denialType) => {
+        const error = new Error('User arn:aws:iam::123456789012:user/private-user is not authorized to perform ses:SendEmail on resource arn:aws:ses:us-east-1:123456789012:identity/verified@example.com ' + suffix)
+        error.name = 'AccessDeniedException'
+        mocks.send.mockRejectedValue(error)
+        expect(await requestWelcomeEmail('u1')).toBe(false)
+        expect(console.warn).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            deniedAction: 'ses:SendEmail', policyType, denialType,
+            resourceType: 'IDENTITY', resourceRegionMatches: true, resourceMatchesSender: true,
+        }))
+        const logs = JSON.stringify(vi.mocked(console.warn).mock.calls)
+        for (const secret of ['private-user', '123456789012', 'verified@example.com', 'arn:aws:']) {
+            expect(logs).not.toContain(secret)
+        }
+    })
+    it('distingue otro recurso y región sin publicar sus valores', async () => {
+        const error = new Error('ses:SendRawEmail on resource arn:aws:ses:eu-west-1:123456789012:identity/other@example.com')
+        error.name = 'AccessDeniedException'
+        mocks.send.mockRejectedValue(error)
+        await requestWelcomeEmail('u1')
+        expect(console.warn).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            deniedAction: 'ses:SendRawEmail', resourceRegionMatches: false, resourceMatchesSender: false,
+        }))
+        expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain('other@example.com')
+    })
+    it('un mensaje desconocido no produce conclusiones ni revela su contenido', async () => {
+        const error = new Error('private key owner@example.com')
+        error.name = 'AccessDeniedException'
+        mocks.send.mockRejectedValue(error)
+        await requestWelcomeEmail('u1')
+        expect(console.warn).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            deniedAction: 'UNSPECIFIED', policyType: 'UNSPECIFIED', denialType: 'UNSPECIFIED',
+            resourceType: 'UNSPECIFIED', resourceRegionMatches: null, resourceMatchesSender: null,
+        }))
+        expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain('private key')
     })
     it('escapa HTML y omite descripciones libres', () => {
         const result = transactionTemplate({ ...tx, id: '<script>bad</script>' }, 'https://app.example.com')

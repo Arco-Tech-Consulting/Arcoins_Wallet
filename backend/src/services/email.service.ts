@@ -30,6 +30,31 @@ function diagnosticReason(error: unknown): string {
     return diagnosticNames.has(error.name) ? error.name : 'UNKNOWN_ERROR'
 }
 
+// Classify the provider text locally; only fixed labels and comparisons leave this function.
+function accessDeniedDetails(error: unknown) {
+    if (!(error instanceof Error) || !['AccessDeniedException', 'AccessDenied'].includes(error.name)) return {}
+    const message = error.message
+    const action = /\bses:(SendEmail|SendRawEmail|SendTemplatedEmail)\b/.exec(message)?.[1]
+    const resource = /arn:aws:ses:([a-z0-9-]+):[0-9]{12}:(identity|configuration-set)\/([^\s"']+)/.exec(message)
+    const policyType = /service control policy/i.test(message) ? 'SERVICE_CONTROL_POLICY'
+        : /permissions boundary/i.test(message) ? 'PERMISSIONS_BOUNDARY'
+        : /session policy/i.test(message) ? 'SESSION_POLICY'
+        : /identity.based policy/i.test(message) ? 'IDENTITY_POLICY'
+        : /resource.based policy/i.test(message) ? 'RESOURCE_POLICY'
+        : 'UNSPECIFIED'
+    return {
+        deniedAction: action ? 'ses:' + action : 'UNSPECIFIED',
+        denialType: /explicit deny/i.test(message) ? 'EXPLICIT_DENY'
+            : /no .*policy allows/i.test(message) ? 'NO_ALLOW' : 'UNSPECIFIED',
+        policyType,
+        resourceType: resource?.[2] === 'identity' ? 'IDENTITY'
+            : resource?.[2] === 'configuration-set' ? 'CONFIGURATION_SET' : 'UNSPECIFIED',
+        resourceRegionMatches: resource ? resource[1] === process.env.AWS_REGION?.trim() : null,
+        resourceMatchesSender: resource?.[2] === 'identity'
+            ? resource[3] === process.env.SES_FROM_EMAIL?.trim() : null,
+    }
+}
+
 // Best effort, one attempt, after COMMIT. Never rejects into a business operation.
 async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) => Promise<Mail | null>): Promise<boolean> {
     const enabled = kind === 'welcome' ? process.env.WELCOME_EMAIL_ENABLED : process.env.TRANSACTION_EMAIL_ENABLED
@@ -84,6 +109,7 @@ async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) =
         // No recipient, credentials, content or provider error bodies in logs.
         console.warn('[email] Envío no confirmado; la operación sigue guardada.', {
             kind, stage, reason: timedOut ? 'TIMEOUT' : diagnosticReason(error),
+            ...accessDeniedDetails(error),
         })
         return false
     } finally {
