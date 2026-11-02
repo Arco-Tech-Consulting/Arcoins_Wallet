@@ -392,6 +392,9 @@ RETURNING
       isConversion ? data.rate_timestamp || new Date() : null,
       data.merchant_id || null,
       data.description || null,
+      data.fee_amount ?? null,
+      data.fee_currency ?? null,
+      data.fee_rate ?? null,
     ];
 
     const result = await client.query(query, values);
