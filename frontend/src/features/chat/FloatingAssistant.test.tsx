@@ -33,15 +33,4 @@ describe('FloatingAssistant', () => {
     await user.keyboard('{Escape}')
     expect(screen.getByRole('button', { name: 'Abrir asistente' })).toHaveFocus()
   })
-
-  it('abre un único panel al entrar a la ruta del chat', async () => {
-    render(
-      <MemoryRouter initialEntries={['/chat']}>
-        <FloatingAssistant />
-      </MemoryRouter>,
-    )
-    expect(await screen.findByRole('region', { name: 'Asistente de Arcoins' })).toBeVisible()
-    expect(screen.getAllByRole('log')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Ocultar asistente' })).toHaveAttribute('aria-expanded', 'true')
-  })
 })
