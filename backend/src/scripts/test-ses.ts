@@ -8,6 +8,7 @@ async function testSES() {
 
   const region = process.env.AWS_REGION?.trim();
   const fromEmail = process.env.SES_FROM_EMAIL?.trim();
+  const fromName = (process.env.SES_FROM_NAME?.trim() || 'Arcoins Wallet').replace(/["\r\n]/g, '');
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
   const toEmail = process.argv[2]?.trim() || fromEmail;
@@ -15,6 +16,7 @@ async function testSES() {
   console.log(`1. Variables de entorno detectadas:`);
   console.log(`   - AWS_REGION: ${region || '❌ NO DEFINIDA'}`);
   console.log(`   - SES_FROM_EMAIL: ${fromEmail || '❌ NO DEFINIDA'}`);
+  console.log(`   - SES_FROM_NAME: ${fromName}`);
   console.log(`   - AWS_ACCESS_KEY_ID: ${accessKeyId ? `✅ Presente (${accessKeyId.slice(0, 4)}...${accessKeyId.slice(-4)})` : '❌ NO DEFINIDA'}`);
   console.log(`   - AWS_SECRET_ACCESS_KEY: ${secretAccessKey ? '✅ Presente (oculta)' : '❌ NO DEFINIDA'}`);
   console.log(`   - Destinatario de prueba: ${toEmail || '❌ NO DEFINIDO'}`);
@@ -34,12 +36,12 @@ async function testSES() {
     maxAttempts: 1,
   });
 
-  console.log(`\n2. Intentando enviar correo de prueba desde "${fromEmail}" hacia "${toEmail}"...`);
+  console.log(`\n2. Intentando enviar correo de prueba desde "${fromName}" <${fromEmail}> hacia "${toEmail}"...`);
 
   try {
     const response = await client.send(
       new SendEmailCommand({
-        FromEmailAddress: fromEmail,
+        FromEmailAddress: `"${fromName}" <${fromEmail}>`,
         Destination: { ToAddresses: [toEmail] },
         Content: {
           Simple: {

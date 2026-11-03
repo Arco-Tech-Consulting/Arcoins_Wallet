@@ -67,6 +67,7 @@ async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) =
     try {
         const region = process.env.AWS_REGION?.trim()
         const from = process.env.SES_FROM_EMAIL?.trim()
+        const fromName = (process.env.SES_FROM_NAME?.trim() || 'Arcoins Wallet').replace(/["\r\n]/g, '')
         const url = new URL(process.env.ARCOINS_APP_URL || '')
         if (!region || !from || !emailPattern.test(from) || url.protocol !== 'https:' || url.username || url.password) {
             throw new Error('Mail configuration invalid')
@@ -92,7 +93,7 @@ async function deliver(kind: 'welcome' | 'transaction', load: (appUrl: string) =
             stage = 'ses_send'
             client = new SESv2Client({ region, maxAttempts: 1 })
             const response = await client.send(new SendEmailCommand({
-                FromEmailAddress: from,
+                FromEmailAddress: `"${fromName}" <${from}>`,
                 Destination: { ToAddresses: [mail.to] },
                 Content: { Simple: {
                     Subject: { Data: mail.subject, Charset: 'UTF-8' },
