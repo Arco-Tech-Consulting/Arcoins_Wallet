@@ -31,13 +31,11 @@ tags:
   - name: Billetera
     description: Consulta de billetera y saldos multidivisa
   - name: Operaciones Financieras
-    description: Depósitos, conversiones, tasas de cambio y transacciones
+    description: Depósitos, transferencias entre usuarios, conversiones, pagos y transacciones
   - name: Comercios
     description: Listado de comercios habilitados para pagos
   - name: Asistente Virtual
     description: Asistencia financiera y consultas mediante Inteligencia Artificial
-  - name: Transferencias
-    description: Envío de fondos entre usuarios de Arcoins mediante correo electrónico
 
 paths:
   /:
@@ -605,7 +603,7 @@ paths:
   /api/transfers:
     post:
       tags:
-        - Transferencias
+        - Operaciones Financieras
       summary: Transferir fondos a otro usuario
       description: |
         Transfiere fondos de la billetera del usuario autenticado a otro usuario registrado en la plataforma
