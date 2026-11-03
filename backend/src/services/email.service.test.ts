@@ -30,8 +30,15 @@ describe('correo directo SES', () => {
         const input = mocks.send.mock.calls[0][0].input
         expect(input.Destination.ToAddresses).toEqual(['owner@example.com'])
         expect(input.Content.Simple.Subject.Charset).toBe('UTF-8')
+        expect(input.FromEmailAddress).toBe('"Arcoins Wallet" <verified@example.com>')
         expect(input.Content.Simple.Body.Text.Data).toContain('no verifica')
         expect(mocks.destroy).toHaveBeenCalledOnce()
+    })
+    it('permite personalizar el nombre remitente mediante SES_FROM_NAME', async () => {
+        vi.stubEnv('SES_FROM_NAME', 'Soporte Arcoins')
+        expect(await requestWelcomeEmail('u1')).toBe(true)
+        const input = mocks.send.mock.calls[0][0].input
+        expect(input.FromEmailAddress).toBe('"Soporte Arcoins" <verified@example.com>')
     })
     it('consulta la transacción completed por ID y propietario e incluye su comisión', async () => {
         expect(await requestTransactionEmail('u1', 'tx1')).toBe(true)
