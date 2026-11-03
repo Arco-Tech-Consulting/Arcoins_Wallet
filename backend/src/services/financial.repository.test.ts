@@ -257,6 +257,18 @@ describe("FinancialRepository.applyTransaction", () => {
     expect(revenueInsert).toBeDefined();
     expect(revenueInsert?.[1]).toEqual(["tx-comision-1", "COP", "500.00"]);
 
+    const transactionInsert = mockClientQuery.mock.calls.find(([sql]) =>
+      String(sql).includes("INSERT INTO transactions")
+    );
+
+    expect(transactionInsert).toBeDefined();
+    expect(transactionInsert?.[1]).toHaveLength(13);
+    expect(transactionInsert?.[1]?.slice(10)).toEqual([
+      "500.00",
+      "COP",
+      0.005,
+    ]);
+
     const statements = mockClientQuery.mock.calls.map(([sql]) => String(sql));
 
     const revenueIndex = statements.findIndex((sql) =>
@@ -348,7 +360,7 @@ describe("FinancialRepository.applyTransaction", () => {
     mockQuery.mockResolvedValueOnce({
       rows: [{ id: "wallet-1" }],
     });
-  
+
     await expect(
       repository.applyTransaction({
         user_id: "user-1",
@@ -362,7 +374,7 @@ describe("FinancialRepository.applyTransaction", () => {
     ).rejects.toThrow(
       "El monto de destino no coincide con la tasa de cambio."
     );
-  
+
     expect(balanceUpdateCalls()).toHaveLength(0);
     expect(mockConnect).not.toHaveBeenCalled();
   });

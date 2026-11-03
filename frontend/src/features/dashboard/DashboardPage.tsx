@@ -184,7 +184,7 @@ export default function DashboardPage() {
           )}
         </div>
         <p className="mt-2 text-xs text-on-surface-variant">
-          Compartí este ID para que otros usuarios puedan enviarte transferencias.
+          Comparte este ID para que otros usuarios puedan enviarte transferencias.
         </p>
       </Card>
 

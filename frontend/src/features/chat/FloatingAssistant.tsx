@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import ChatPanel from './ChatPanel'
 
 function ChatIcon() {
@@ -15,11 +14,6 @@ export default function FloatingAssistant() {
   const [isOpen, setIsOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLElement>(null)
-  const { pathname } = useLocation()
-
-  useEffect(() => {
-    if (pathname === '/chat') setIsOpen(true)
-  }, [pathname])
 
   useEffect(() => {
     if (isOpen) panelRef.current?.focus()
