@@ -63,7 +63,7 @@ describe('correo posterior a operaciones confirmadas', () => {
         const r = response()
         await new TransferController().createTransfer(req({ receiverEmail: 'owner@example.com', currency: 'USD', amount: 10 }), r as unknown as Response)
         expect(r.status).toHaveBeenCalledWith(400)
-        expect(r.json).toHaveBeenCalledWith({ success: false, error: 'No podés transferirte fondos a vos mismo' })
+        expect(r.json).toHaveBeenCalledWith({ success: false, error: 'No puedes transferirte fondos a ti mismo' })
         expect(mocks.transfer).not.toHaveBeenCalled()
     })
 })
