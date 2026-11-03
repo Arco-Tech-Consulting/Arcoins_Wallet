@@ -54,6 +54,29 @@ export class TransferRepository {
   }
 
   /**
+   * Busca la wallet del receptor por su correo electrónico y retorna walletId y userId del dueño.
+   * Retorna null si no existe un usuario activo con ese correo o no tiene wallet.
+   */
+  public async getWalletByUserEmail(
+    email: string
+  ): Promise<{ walletId: string; userId: string } | null> {
+    const query = `
+      SELECT w.id AS wallet_id, u.id AS user_id
+      FROM users u
+      JOIN wallets w ON w.user_id = u.id
+      WHERE LOWER(u.email) = LOWER($1) AND u.is_active = TRUE
+      LIMIT 1;
+    `;
+    const result = await pool.query(query, [email.trim()]);
+    if (result.rows.length === 0) return null;
+
+    return {
+      walletId: result.rows[0].wallet_id,
+      userId: result.rows[0].user_id,
+    };
+  }
+
+  /**
    * Obtiene la wallet del usuario emisor.
    */
   public async getWalletByUserId(userId: string): Promise<{ id: string } | null> {
@@ -254,4 +277,3 @@ export class TransferRepository {
     };
   }
 }
-
