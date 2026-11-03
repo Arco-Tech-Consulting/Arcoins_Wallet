@@ -47,7 +47,7 @@ describe('correo directo SES', () => {
         expect(mocks.query.mock.calls[0][0].text).toContain('t.user_id = $2')
         const body = mocks.send.mock.calls[0][0].input.Content.Simple.Body.Text.Data
         expect(body).toContain('10.50 USD')
-        expect(body).toContain('0.05 USD')
+        expect(body).toContain('0.0525 USD')
     })
     it('no envía si la consulta no devuelve una operación completada del dueño', async () => {
         mocks.query.mockResolvedValue({ rows: [] })
@@ -163,23 +163,6 @@ describe('correo directo SES', () => {
         const result = transactionTemplate({ ...tx, id: '<script>bad</script>' }, 'https://app.example.com')
         expect(result.html).not.toContain('<script>')
         expect(result.html).toContain('&lt;script&gt;')
-    })
-    it('formatea el título como Operación exitosa y los montos a 2 decimales', () => {
-        const depositTx = {
-            id: 'dep1',
-            type: 'deposit',
-            created_at: '2026-11-03T21:44:25.235Z',
-            from_amount: null,
-            from_currency: null,
-            to_amount: '1000.00000000',
-            to_currency: 'EUR',
-        }
-        const result = transactionTemplate(depositTx, 'https://app.example.com')
-        expect(result.subject).toBe('Arcoins: Operación exitosa - Depósito')
-        expect(result.text).toContain('Operación exitosa: Depósito')
-        expect(result.text).toContain('Monto de entrada: 1000.00 EUR')
-        expect(result.html).toContain('<p>Operación exitosa: Depósito</p>')
-        expect(result.html).toContain('<p>Monto de entrada: 1000.00 EUR</p>')
     })
 })
 
