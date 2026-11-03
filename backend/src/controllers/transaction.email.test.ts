@@ -7,14 +7,14 @@ vi.mock('../services/financial.repository', () => ({ FinancialRepository: class 
 } }))
 vi.mock('../services/exchange-rate.service', () => ({ exchangeRateService: { getExchangeRate: mocks.rate } }))
 vi.mock('../services/transfer.repository', () => ({ TransferRepository: class {
-    executeTransfer = mocks.transfer; getWalletWithOwner = mocks.wallet
+    executeTransfer = mocks.transfer; getWalletWithOwner = mocks.wallet; getWalletByUserEmail = mocks.wallet
 } }))
 vi.mock('../services/email.service', () => ({ requestTransactionEmail: mocks.mail }))
 vi.mock('../socket/socket.service', () => ({ emitToUser: mocks.emit }))
 import { FinancialController } from './financial.controller'
 import { TransferController } from './transfer.controller'
 function response() { const r = { status: vi.fn(), json: vi.fn() }; r.status.mockReturnValue(r); return r }
-function req(body: object) { return { user: { id: 'owner', email: 'unused@example.com' }, body } as AuthenticatedRequest }
+function req(body: object, user = { id: 'owner', email: 'owner@example.com' }) { return { user, body } as AuthenticatedRequest }
 describe('correo posterior a operaciones confirmadas', () => {
     beforeEach(() => {
         vi.resetAllMocks()
@@ -22,7 +22,7 @@ describe('correo posterior a operaciones confirmadas', () => {
         mocks.mail.mockResolvedValue(false)
         mocks.create.mockResolvedValue({ id: 'tx1' })
         mocks.payment.mockResolvedValue({ id: 'tx2' })
-        mocks.wallet.mockResolvedValue({ id: 'wallet2' })
+        mocks.wallet.mockResolvedValue({ walletId: 'wallet2', userId: 'receiver' })
         mocks.transfer.mockResolvedValue({ senderTransaction: { id: 'out' }, receiverTransaction: { id: 'in' }, receiverUserId: 'receiver', transferGroupId: 'g1' })
     })
     it('depósito usa ID guardado e identidad JWT aunque el correo falle', async () => {
@@ -52,23 +52,30 @@ describe('correo posterior a operaciones confirmadas', () => {
     })
     it('transferencia notifica a los dos dueños con sus respectivas transacciones', async () => {
         const r = response()
-        await new TransferController().createTransfer(req({ receiverWalletId: 'wallet2', currency: 'USD', amount: 10 }), r as unknown as Response)
+        await new TransferController().createTransfer(req({ receiverEmail: 'receiver@example.com', currency: 'USD', amount: 10 }), r as unknown as Response)
         expect(r.status).toHaveBeenCalledWith(201)
         expect(mocks.mail).toHaveBeenCalledTimes(2)
         expect(mocks.mail).toHaveBeenCalledWith('owner', 'out')
         expect(mocks.mail).toHaveBeenCalledWith('receiver', 'in')
         expect(mocks.transfer.mock.invocationCallOrder[0]).toBeLessThan(mocks.mail.mock.invocationCallOrder[0])
     })
+    it('no permite transferirse a su propio correo', async () => {
+        const r = response()
+        await new TransferController().createTransfer(req({ receiverEmail: 'owner@example.com', currency: 'USD', amount: 10 }), r as unknown as Response)
+        expect(r.status).toHaveBeenCalledWith(400)
+        expect(r.json).toHaveBeenCalledWith({ success: false, error: 'No podés transferirte fondos a vos mismo' })
+        expect(mocks.transfer).not.toHaveBeenCalled()
+    })
 })
 
 it('conserva el éxito de una transferencia si fallan las notificaciones después del COMMIT', async () => {
-    mocks.wallet.mockResolvedValue({ id: 'wallet2' })
+    mocks.wallet.mockResolvedValue({ walletId: 'wallet2', userId: 'receiver' })
     mocks.transfer.mockResolvedValue({ senderTransaction: { id: 'out' }, receiverTransaction: { id: 'in' }, receiverUserId: 'receiver', transferGroupId: 'g1' })
     mocks.emit.mockImplementationOnce(() => { throw new Error('Socket failed') })
     mocks.mail.mockRejectedValue(new Error('Unexpected mail failure'))
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const r = response()
-    await new TransferController().createTransfer(req({ receiverWalletId: 'wallet2', currency: 'USD', amount: 10 }), r as unknown as Response)
+    await new TransferController().createTransfer(req({ receiverEmail: 'receiver@example.com', currency: 'USD', amount: 10 }), r as unknown as Response)
     expect(r.status).toHaveBeenCalledWith(201)
     expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, transaction: { id: 'out' } }))
     warn.mockRestore()
