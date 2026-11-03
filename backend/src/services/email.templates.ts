@@ -4,12 +4,6 @@ function escapeHtml(text: string) {
     })[char]!)
 }
 
-function formatAmount(amount: string | number | null | undefined): string {
-    if (amount == null) return ''
-    const num = Number(amount)
-    return Number.isFinite(num) ? num.toFixed(2) : String(amount)
-}
-
 export function welcomeTemplate(appUrl: string) {
     return {
         subject: '¡Bienvenido a Arcoins Wallet!',
@@ -42,16 +36,16 @@ export function transactionTemplate(row: TransactionMailData, appUrl: string) {
         payment: 'Pago a comercio', transfer_out: 'Transferencia enviada', transfer_in: 'Transferencia recibida',
     }
     const lines = [
-        'Operación exitosa: ' + (labels[row.type] || 'Operación'),
+        (labels[row.type] || 'Operación') + ' completada.',
         'Referencia: ' + row.id,
         'Fecha (UTC): ' + new Date(row.created_at).toISOString(),
     ]
-    if (row.from_amount != null && row.from_currency) lines.push('Monto de salida: ' + formatAmount(row.from_amount) + ' ' + row.from_currency)
-    if (row.to_amount != null && row.to_currency) lines.push('Monto de entrada: ' + formatAmount(row.to_amount) + ' ' + row.to_currency)
-    if (row.fee_amount != null && row.fee_currency) lines.push('Comisión: ' + formatAmount(row.fee_amount) + ' ' + row.fee_currency)
+    if (row.from_amount != null && row.from_currency) lines.push('Monto de salida: ' + row.from_amount + ' ' + row.from_currency)
+    if (row.to_amount != null && row.to_currency) lines.push('Monto de entrada: ' + row.to_amount + ' ' + row.to_currency)
+    if (row.fee_amount != null && row.fee_currency) lines.push('Comisión: ' + row.fee_amount + ' ' + row.fee_currency)
     lines.push('Consulta el detalle en Arcoins: ' + appUrl, 'Arcoins nunca te pedirá contraseñas ni tokens por correo.')
     return {
-        subject: 'Arcoins: Operación exitosa - ' + (labels[row.type] || 'Operación'),
+        subject: 'Arcoins: ' + (labels[row.type] || 'Operación') + ' completada',
         text: lines.join('\n\n'),
         html: '<!doctype html><html lang="es"><body><h1>Arcoins Wallet</h1>' +
             lines.map((line) => '<p>' + escapeHtml(line) + '</p>').join('') + '</body></html>',
