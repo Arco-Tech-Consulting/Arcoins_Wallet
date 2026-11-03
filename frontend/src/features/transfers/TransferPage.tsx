@@ -60,7 +60,7 @@ export default function TransferPage() {
           Transferencias
         </h2>
         <p className="text-sm text-on-surface-variant">
-          Enviá fondos a otro usuario usando el ID de su billetera.
+          Envía fondos a otro usuario usando el ID de su billetera.
         </p>
       </header>
 
@@ -139,7 +139,7 @@ export default function TransferPage() {
           {/* Fondos insuficientes */}
           {hasInsufficientFunds ? (
             <p className="rounded-lg bg-error-container/30 px-3 py-2 text-sm text-on-error-container">
-              No tenés fondos suficientes en {currency} para realizar esta transferencia.
+              No tienes fondos suficientes en {currency} para realizar esta transferencia.
             </p>
           ) : null}
 
@@ -177,7 +177,7 @@ export default function TransferPage() {
           ¿Dónde encontrar el ID de billetera?
         </h3>
         <p className="text-sm text-on-surface-variant">
-          El receptor debe compartirte su ID de billetera desde el Dashboard.
+          El receptor debe compartir su ID de billetera contigo desde el Dashboard.
           Es un código único que identifica su cuenta y nunca cambia.
         </p>
       </Card>
