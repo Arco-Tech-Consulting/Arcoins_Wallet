@@ -36,6 +36,8 @@ tags:
     description: Listado de comercios habilitados para pagos
   - name: Asistente Virtual
     description: Asistencia financiera y consultas mediante Inteligencia Artificial
+  - name: Transferencias
+    description: Envío de fondos entre usuarios de Arcoins mediante correo electrónico
 
 paths:
   /:
@@ -600,6 +602,94 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorSuccessResponse"
 
+  /api/transfers:
+    post:
+      tags:
+        - Transferencias
+      summary: Transferir fondos a otro usuario
+      description: |
+        Transfiere fondos de la billetera del usuario autenticado a otro usuario registrado en la plataforma
+        utilizando su dirección de correo electrónico. La operación es atómica e inmediata.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransferDto"
+      responses:
+        "201":
+          description: Transferencia procesada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferResponse"
+        "400":
+          description: Datos inválidos, fondos insuficientes o intento de transferirse a uno mismo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorSuccessResponse"
+              examples:
+                email_requerido:
+                  summary: Correo no proporcionado
+                  value:
+                    success: false
+                    error: El correo electrónico del receptor es obligatorio
+                email_invalido:
+                  summary: Formato de correo no válido
+                  value:
+                    success: false
+                    error: El formato del correo electrónico no es válido
+                mismo_usuario:
+                  summary: Transferencia hacia sí mismo
+                  value:
+                    success: false
+                    error: No puedes transferirte fondos a ti mismo
+                moneda_no_soportada:
+                  summary: Moneda no permitida
+                  value:
+                    success: false
+                    error: "Moneda no soportada. Las monedas válidas son: COP, USD, EUR"
+                monto_invalido:
+                  summary: Monto menor o igual a cero
+                  value:
+                    success: false
+                    error: El monto debe ser un número mayor a cero
+                fondos_insuficientes:
+                  summary: Saldo insuficiente
+                  value:
+                    success: false
+                    error: Fondos insuficientes para completar la transferencia
+        "401":
+          description: Usuario no autenticado o token JWT no provisto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorSuccessResponse"
+              example:
+                success: false
+                error: Usuario no autenticado
+        "404":
+          description: Usuario receptor no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorSuccessResponse"
+              example:
+                success: false
+                error: No se encontró ningún usuario con ese correo electrónico
+        "500":
+          description: Error interno del servidor al procesar la transferencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorSuccessResponse"
+              example:
+                success: false
+                error: Error al procesar la transferencia
+
   /api/merchants:
     get:
       tags:
@@ -777,11 +867,11 @@ components:
         email:
           type: string
           format: email
-          example: juan.perez@example.com
+          example: bruno@example.com
         password:
           type: string
           format: password
-          example: secreto123
+          example: Password123!
 
     UserResponse:
       type: object
@@ -1021,3 +1111,83 @@ components:
         error:
           type: string
           example: Mensaje descriptivo del error
+
+    CreateTransferDto:
+      type: object
+      required:
+        - receiverEmail
+        - currency
+        - amount
+      properties:
+        receiverEmail:
+          type: string
+          format: email
+          description: Correo electrónico del usuario receptor
+          example: receptor@ejemplo.com
+        currency:
+          type: string
+          enum: [COP, USD, EUR]
+          description: Moneda de la transferencia
+          example: USD
+        amount:
+          type: number
+          minimum: 0.01
+          description: Monto a transferir (mayor a cero)
+          example: 50.0
+        description:
+          type: string
+          description: Concepto o detalle opcional de la transferencia
+          example: Pago de almuerzo compartido
+
+    TransferResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        transferGroupId:
+          type: string
+          format: uuid
+          example: 3c907b22-540c-4ef0-9e63-95cf580a6b73
+        transaction:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: 7b844ca1-7443-4dc8-a7ce-e0c2941ec59d
+            type:
+              type: string
+              example: transfer_out
+            status:
+              type: string
+              example: completed
+            fromCurrency:
+              type: string
+              example: USD
+            toCurrency:
+              type: string
+              nullable: true
+              example: null
+            fromAmount:
+              type: number
+              example: 50.0
+            toAmount:
+              type: number
+              nullable: true
+              example: null
+            counterpartUserId:
+              type: string
+              format: uuid
+              example: a89e6e88-34fd-432d-949e-ec7a21fbcf02
+            transferGroupId:
+              type: string
+              format: uuid
+              example: 3c907b22-540c-4ef0-9e63-95cf580a6b73
+            description:
+              type: string
+              example: "Enviaste: Pago de almuerzo compartido"
+            createdAt:
+              type: string
+              format: date-time
+              example: 2026-11-03T10:00:00.000Z
