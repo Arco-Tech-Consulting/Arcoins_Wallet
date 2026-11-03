@@ -11,9 +11,8 @@ router.use(authenticateToken);
 /**
  * POST /api/transfers
  * Transfiere fondos de la billetera del usuario autenticado
- * a la billetera identificada por receiverWalletId.
+ * al usuario identificado por receiverEmail.
  */
 router.post('/transfers', (req, res) => transferController.createTransfer(req, res));
 
 export default router;
-
