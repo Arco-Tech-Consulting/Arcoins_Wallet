@@ -20,6 +20,7 @@ backend vive en la misma monorepo (`backend/`).
 | Routing | React Router 7 (`BrowserRouter`) |
 | Estado servidor | TanStack Query 5 (data fetching + caché) |
 | Estado de sesión | React Context (JWT) |
+| Tiempo real | Socket.IO Client 4 (notificaciones de transferencias) |
 | Mocks en desarrollo | MSW 3 |
 | Tests | Vitest 5 + React Testing Library |
 | Linter | Oxlint |
@@ -53,11 +54,14 @@ Se definen en archivos `.env*` (ver `frontend/.env.example`).
 | Variable | Efecto | Valor recomendado |
 | --- | --- | --- |
 | `VITE_API_URL` | URL base de la API. | `/api` (dev) · `https://arcoins-wallet.onrender.com/api` (producción) |
+| `VITE_SOCKET_URL` | URL del servidor Socket.io para las notificaciones. **Sin `/api` ni barra final.** | omitir (dev local usa `http://localhost:3000`) · `https://arcoins-wallet.onrender.com` (producción) |
 | `VITE_ENABLE_MOCKS` | Activa MSW. **Solo aplica en desarrollo** (`npm run dev`); en `npm run build` se ignora y siempre se usa la API real. | `true` / `false` |
 | `VITE_PROXY_TARGET` | Destino del proxy de Vite cuando los mocks están desactivados. | `http://localhost:3000` o la URL de Render |
 
 > **Nota importante:** `VITE_*` se inyectan **al compilar**. Si se cambian en
-> Vercel, hay que volver a desplegar para que tomen efecto.
+> Vercel, hay que volver a desplegar para que tomen efecto. En Vercel la
+> variable debe existir en el scope del entorno que despliega (Production y/o
+> Preview) o el preview intentará conectarse a `localhost`.
 
 Para desarrollo local contra el backend real:
 
@@ -96,24 +100,32 @@ frontend/
 │   │   ├── rates.api.ts
 │   │   ├── transactions.api.ts
 │   │   ├── deposit.api.ts
+│   │   ├── transfers.api.ts   # transferencias entre usuarios
 │   │   ├── merchants.api.ts
 │   │   └── chat.api.ts
 │   ├── features/              # pantallas, una carpeta por caso de uso
 │   │   ├── landing/           # landing page pública
 │   │   ├── auth/              # login y registro
-│   │   ├── dashboard/         # resumen de saldos y movimientos
+│   │   ├── dashboard/         # saldos, tasas en vivo y tendencia 7 días
 │   │   ├── transactions/      # operaciones (compra/venta) e historial
 │   │   ├── deposit/           # depósito
 │   │   ├── payments/          # pagos a comercios
+│   │   ├── transfers/         # transferencias entre usuarios
 │   │   ├── budget/            # calculadora de presupuesto
-│   │   ├── chat/              # asistente IA
+│   │   ├── chat/              # asistente IA (panel flotante)
 │   │   └── not-found/         # página 404
-│   ├── components/ui/         # primitivas: Button, ButtonLink, Brand, Card, Drawer, Input, Select, Spinner
-│   ├── context/               # AuthContext (sesión/JWT)
+│   ├── components/            # componentes transversales
+│   │   ├── ui/                # primitivas: Button, ButtonLink, Brand, Card, Drawer, Input, Select, Spinner
+│   │   ├── TransferToast.tsx  # aviso en vivo de transferencias recibidas
+│   │   ├── NotificationBell.tsx # campana + centro de notificaciones
+│   │   ├── RateChart.tsx      # gráfica de tendencia de tasas
+│   │   └── BalanceCards.tsx   # tarjetas de saldo compartidas
+│   ├── context/               # AuthContext (sesión/JWT) y SocketContext (tiempo real)
+│   ├── socket/                # cliente Socket.io autenticado con el JWT
 │   ├── layouts/               # AuthLayout y AppLayout (con navegación)
 │   ├── router/                # ProtectedRoute
-│   ├── hooks/                 # hooks compartidos (p. ej. useRate)
-│   ├── lib/                   # formatters y configuración de QueryClient
+│   ├── hooks/                 # hooks compartidos (useBalances, useRate)
+│   ├── lib/                   # formatters, market.api (histórico de tasas) y QueryClient
 │   ├── mocks/                 # handlers de MSW
 │   ├── test/                  # setup y utilidades de testing
 │   ├── types/                 # tipos compartidos del contrato
@@ -136,10 +148,13 @@ frontend/
 | `/operations` | Compra, venta e intercambio de moneda | protegida |
 | `/deposit` | Depósito | protegida |
 | `/payments` | Pago a comercios | protegida |
+| `/transfers` | Transferencias entre usuarios por correo | protegida |
 | `/history` | Historial de transacciones con filtros | protegida |
-| `/chat` | Asistente IA | protegida |
 | `/budget` | Calculadora de presupuesto | protegida |
 | `*` | Página 404 con enlaces de salida | — |
+
+El asistente IA no tiene ruta: vive como widget flotante en todas las
+pantallas de la app. La URL antigua `/chat` redirige a `/dashboard`.
 
 Todas las rutas protegidas renderizan dentro de `AppLayout` (navegación de
 escritorio + menú lateral en móvil) y requieren JWT; sin token se redirige a
@@ -150,21 +165,30 @@ escritorio + menú lateral en móvil) y requieren JWT; sin token se redirige a
 ## Funcionalidades
 
 - **Landing pública:** presentación del producto con hero animado, cifras
-  ilustrativas (no reales), cómo funciona, funcionalidades, demostración del
-  asistente y llamados a crear cuenta. Con sesión activa redirige a la app.
+  ilustrativas (no reales), sección "Nuestro plus" con el diferencial de
+  comisiones (gratis en transferencias y pagos; 0.5% solo al cambiar de
+  moneda), cómo funciona y llamados a crear cuenta. Con sesión activa
+  redirige a la app.
 - **Autenticación:** registro, inicio de sesión y persistencia del JWT
   (`Authorization: Bearer <jwt>` en cada petición).
-- **Dashboard:** consulta de saldos en las tres monedas y resumen de
-  movimientos recientes.
+- **Dashboard:** saldos en las tres monedas con moneda de referencia
+  conmutable, tasas de cambio en vivo y comportamiento de cada par de los
+  últimos 7 días (gráficas expandibles con mínimo, máximo y variación).
 - **Operaciones:** compra/venta/intercambio con la tasa de cambio en vivo
   (open.er-api.com con respaldo en la base de datos) y previsualización del
   resultado antes de confirmar.
 - **Depósito:** abono por moneda con previsualización del nuevo saldo.
 - **Pagos a comercios:** selección de comercio agrupado por categoría,
   control de fondos insuficientes y descuento real del saldo.
+- **Transferencias entre usuarios:** por correo electrónico del receptor,
+  con validación de formato, vista previa del saldo restante, notificación
+  en tiempo real vía Socket.IO y toast de confirmación.
+- **Notificaciones:** toast en vivo al recibir una transferencia + campana
+  en el header con badge de pendientes y centro de notificaciones de la
+  sesión (el historial se mantiene en memoria hasta cerrar sesión).
 - **Historial:** listado paginado con filtros por tipo, moneda y rango de fechas.
-- **Asistente IA:** chat con respuestas del backend (Gemini) y estados de
-  carga, error y reintento.
+- **Asistente IA:** widget flotante en toda la app con respuestas del
+  backend (Gemini) y estados de carga, error y reintento.
 - **Calculadora de presupuesto:** estimación de un viaje según días y gasto diario.
 
 ### Responsive (mobile-first)
@@ -202,10 +226,11 @@ npm test
 ```
 
 Cubren las utilidades puras (formatters, cálculos de operaciones, dashboard,
-presupuesto) y el comportamiento de las pantallas (login, dashboard,
-operaciones, historial, depósito y pagos) con MSW respondiendo a la API, junto
-con la landing (hero, secciones y redirección con sesión activa) y el menú
-móvil de `AppLayout` (apertura, navegación y cierre por `Escape`).
+tasa de mercado, presupuesto) y el comportamiento de las pantallas (login,
+dashboard, operaciones, historial, depósito, pagos y transferencias) con MSW
+respondiendo a la API, junto con los componentes transversales (campana de
+notificaciones, gráfica de tasas, toast) y la landing (hero, secciones,
+diferencial de comisiones y redirección con sesión activa).
 
 ---
 
