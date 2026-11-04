@@ -55,10 +55,21 @@ erDiagram
         numeric to_amount
         numeric rate_used
         timestamp rate_timestamp
+        numeric fee_amount
+        char fee_currency FK
+        numeric fee_rate
         uuid counterpart_user_id FK
         uuid transfer_group_id
         uuid merchant_id FK
         varchar description
+        timestamp created_at
+    }
+
+    COMMISSION_REVENUES {
+        uuid id PK
+        uuid transaction_id FK, UK
+        char currency FK
+        numeric amount
         timestamp created_at
     }
 
@@ -76,9 +87,12 @@ erDiagram
     CURRENCIES ||--o{ WALLET_BALANCES : "define"
     CURRENCIES |o--o{ TRANSACTIONS : "origen"
     CURRENCIES |o--o{ TRANSACTIONS : "destino"
+    CURRENCIES |o--o{ TRANSACTIONS : "comision"
     USERS ||--o{ TRANSACTIONS : "ejecuta"
     USERS |o--o{ TRANSACTIONS : "contraparte"
     MERCHANTS |o--o{ TRANSACTIONS : "recibe_pago"
+    TRANSACTIONS ||--o| COMMISSION_REVENUES : "genera"
+    CURRENCIES ||--o{ COMMISSION_REVENUES : "moneda"
     CURRENCIES ||--o{ EXCHANGE_RATES : "base"
     CURRENCIES ||--o{ EXCHANGE_RATES : "target"
 ```
