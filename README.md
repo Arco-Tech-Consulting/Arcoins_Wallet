@@ -7,7 +7,7 @@ realizar conversiones y registrar movimientos de forma segura y transparente.
 **Aplicación en producción**
 
 - Frontend: https://arcoinswallet.vercel.app/
-- Backend: https://arcoins-wallet.onrender.com/api
+- Backend: https://arcoins-wallet.onrender.com/
 - Documentación de la API (Swagger): https://arcoins-wallet.onrender.com/api-docs
 
 ## Desarrolladores
