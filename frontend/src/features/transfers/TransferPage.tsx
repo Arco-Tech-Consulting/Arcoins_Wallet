@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { BalanceCards } from '@/components/BalanceCards'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -9,8 +10,12 @@ import { CURRENCY_META, formatSymbolAmount } from '@/lib/formatters'
 import { CURRENCIES, type CurrencyCode } from '@/types/api'
 import { useCreateTransfer } from './hooks'
 
+// Misma regla del backend: formato básico de correo
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function TransferPage() {
-  const [receiverWalletId, setReceiverWalletId] = useState('')
+  const { user } = useAuth()
+  const [receiverEmail, setReceiverEmail] = useState('')
   const [currency, setCurrency] = useState<CurrencyCode>('COP')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -19,6 +24,8 @@ export default function TransferPage() {
   const createTransfer = useCreateTransfer()
 
   const numericAmount = Number(amount)
+  const trimmedEmail = receiverEmail.trim()
+  const emailInvalid = trimmedEmail.length > 0 && !EMAIL_REGEX.test(trimmedEmail)
 
   const currentBalance =
     balancesQuery.data?.find((b) => b.currency === currency)?.amount ?? 0
@@ -27,7 +34,8 @@ export default function TransferPage() {
   const hasInsufficientFunds = numericAmount > 0 && balanceAfter < 0
 
   const canSubmit =
-    receiverWalletId.trim().length > 0 &&
+    EMAIL_REGEX.test(trimmedEmail) &&
+    !emailInvalid &&
     numericAmount > 0 &&
     !hasInsufficientFunds &&
     !createTransfer.isPending
@@ -38,14 +46,14 @@ export default function TransferPage() {
 
     createTransfer.mutate(
       {
-        receiverWalletId: receiverWalletId.trim(),
+        receiverEmail: trimmedEmail,
         currency,
         amount: numericAmount,
         description: description.trim() || undefined,
       },
       {
         onSuccess: () => {
-          setReceiverWalletId('')
+          setReceiverEmail('')
           setAmount('')
           setDescription('')
         },
@@ -60,23 +68,33 @@ export default function TransferPage() {
           Transferencias
         </h2>
         <p className="text-sm text-on-surface-variant">
-          Envía fondos a otro usuario usando el ID de su billetera.
+          Envía fondos a otro usuario usando su correo de registro.
         </p>
+        {user?.email ? (
+          <p className="mt-1 text-xs text-outline">
+            Para que te transfieran a ti, comparte tu correo:{' '}
+            <span className="font-medium text-on-surface-variant">{user.email}</span>
+          </p>
+        ) : null}
       </header>
 
       <Card>
         <BalanceCards className="mb-5" />
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* ID de la billetera del receptor */}
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+          {/* Correo del receptor */}
           <Input
-            label="ID de billetera del receptor"
-            type="text"
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            value={receiverWalletId}
-            onChange={(e) => setReceiverWalletId(e.target.value)}
+            label="Correo del receptor"
+            type="email"
+            placeholder="receptor@correo.com"
             autoComplete="off"
-            spellCheck={false}
+            value={receiverEmail}
+            onChange={(e) => setReceiverEmail(e.target.value)}
+            error={
+              emailInvalid
+                ? 'El formato del correo electrónico no es válido'
+                : undefined
+            }
           />
 
           {/* Moneda y monto */}
@@ -171,17 +189,17 @@ export default function TransferPage() {
         </form>
       </Card>
 
-      {/* Info: cómo encontrar el ID de billetera */}
+      {/* Info: cómo funciona la identificación del receptor */}
       <Card>
         <h3 className="mb-2 text-sm font-semibold text-on-surface">
-          ¿Dónde encontrar el ID de billetera?
+          ¿Cómo identifico a quien recibe?
         </h3>
         <p className="text-sm text-on-surface-variant">
-          El receptor debe compartir su ID de billetera contigo desde el Dashboard.
-          Es un código único que identifica su cuenta y nunca cambia.
+          Pídele el correo con el que se registró. El dinero llega directamente a
+          su billetera asociada a ese correo; no hay códigos ni números largos
+          que copiar.
         </p>
       </Card>
     </section>
   )
 }
-

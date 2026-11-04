@@ -126,7 +126,7 @@ export interface CheckoutResponse {
 
 
 export interface CreateTransferRequest {
-  receiverWalletId: string
+  receiverEmail: string
   currency: CurrencyCode
   amount: number
   description?: string
