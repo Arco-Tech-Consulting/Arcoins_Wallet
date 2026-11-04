@@ -276,9 +276,25 @@ export const handlers = [
     await delay(300)
     const body = await request.json()
 
-    if (!body.receiverWalletId || !body.currency || !body.amount || body.amount <= 0) {
+    const receiverEmail = typeof body.receiverEmail === 'string' ? body.receiverEmail.trim().toLowerCase() : ''
+
+    if (!receiverEmail || !body.currency || !body.amount || body.amount <= 0) {
       return HttpResponse.json(
-        { success: false, error: 'Todos los campos son obligatorios y el monto debe ser mayor a 0.' },
+        { success: false, error: 'El correo del receptor, la moneda y un monto mayor a 0 son obligatorios.' },
+        { status: 400 },
+      )
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(receiverEmail)) {
+      return HttpResponse.json(
+        { success: false, error: 'El formato del correo electrónico no es válido' },
+        { status: 400 },
+      )
+    }
+
+    if (receiverEmail === demoUser.email.toLowerCase()) {
+      return HttpResponse.json(
+        { success: false, error: 'No puedes transferirte fondos a ti mismo' },
         { status: 400 },
       )
     }
@@ -301,7 +317,7 @@ export const handlers = [
       status: 'completed',
       fromCurrency: body.currency,
       fromAmount: body.amount,
-      description: body.description ?? `Transferencia a ${body.receiverWalletId.slice(0, 8)}...`,
+      description: body.description ?? `Transferencia a ${receiverEmail}`,
       createdAt: new Date().toISOString(),
     }
     transactions.unshift(transaction)
