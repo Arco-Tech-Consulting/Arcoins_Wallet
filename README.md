@@ -25,7 +25,11 @@ realizar conversiones y registrar movimientos de forma segura y transparente.
 - **Base de datos:** PostgreSQL.
 - **Autenticación:** JWT (Bearer).
 - **Inteligencia artificial:** Gemini (Google GenAI) para el asistente.
-- **Tasas de cambio:** ExchangeRate API, con respaldo en la base de datos.
+- **Tasas de cambio:** ExchangeRate API, con respaldo en la base de datos e
+  histórico diario para las tendencias del dashboard.
+- **Tiempo real:** Socket.IO para notificaciones de transferencias.
+- **Correo transaccional:** AWS SES (bienvenida y comprobantes de
+  transferencias).
 - **Despliegue:** Vercel (frontend), Render (backend).
 - **Calidad de código:** Vitest + React Testing Library (frontend), Vitest +
   Supertest (backend), Oxlint, MSW para mocks.
@@ -34,14 +38,19 @@ realizar conversiones y registrar movimientos de forma segura y transparente.
 
 - Registro e inicio de sesión con JWT.
 - Gestión de saldos en COP, USD y EUR.
-- Compra, venta e intercambio de monedas con la tasa de cambio en vivo.
 - Depósitos y pagos a comercios.
+- Transferencias entre usuarios por correo electrónico del receptor,
+  con transacciones atómicas y notificación en tiempo real vía Socket.IO.
+- Compra, venta e intercambio de monedas con la tasa del momento.
+  **Comisión de 0.5% solo al intercambiar monedas**: las transferencias entre
+  usuarios y los pagos a comercios no generan cobros.
 - Historial de transacciones con filtros por tipo, moneda y rango de fechas.
-- Consulta de tasas de cambio.
-- Asistente de inteligencia artificial.
+- Dashboard con saldos, tasas de cambio en vivo y comportamiento de la tasa
+  de los últimos 7 días (gráficas expandibles por par de monedas).
+- Centro de notificaciones con badge de pendientes para las transferencias
+  recibidas.
+- Asistente de inteligencia artificial flotante, disponible en toda la app.
 - Calculadora de presupuesto de viaje.
-
-**Pendiente:** transferencias entre usuarios (requiere endpoint en el backend).
 
 ## Objetivo
 

@@ -112,6 +112,55 @@ Query params opcionales: `type`, `currency`, `from` (fecha), `to` (fecha), `page
 { "data": [ { "id": "c0000000-0000-0000-0000-000000000001", "name": "Café Andino", "category": "Restaurantes" } ] }
 ```
 
+## Transferencias entre usuarios
+
+### POST /api/transfers
+
+Mueve fondos de forma atómica del usuario autenticado hacia la billetera
+asociada al correo del receptor. No genera comisión.
+
+```json
+// req
+{ "receiverEmail": "maria@arcoins.app", "currency": "COP", "amount": 50000, "description": "Alquiler" }
+```
+
+```json
+// res 201 — la transacción de salida del emisor
+{ "success": true, "transaction": { /* Transaction type: transfer_out */ }, "transferGroupId": "g1" }
+```
+
+Errores de validación (400/404) en `error`:
+
+- `El correo electrónico del receptor es obligatorio`
+- `El formato del correo electrónico no es válido`
+- `No puedes transferirte fondos a ti mismo`
+- `Moneda no soportada. Las monedas válidas son: COP, USD, EUR`
+- `El monto debe ser un número mayor a cero`
+- `No se encontró ningún usuario con ese correo electrónico` (404)
+- `Fondos insuficientes...` (400, del repo)
+- `500 Error al procesar la transferencia` para fallos internos
+
+## Tiempo real (Socket.IO)
+
+Conexión a `VITE_SOCKET_URL` autenticada con el JWT en `auth.token`
+(`transports: ['polling', 'websocket']` para compatibilidad con Render).
+
+Evento que escucha el frontend:
+
+```json
+// "transfer_received" — emitido solo al receptor de la transferencia
+{
+  "transferGroupId": "g1",
+  "currency": "COP",
+  "amount": 50000,
+  "description": "Alquiler",
+  "createdAt": "2026-10-14T12:00:05.000Z"
+}
+```
+
+Al recibirlo el frontend muestra el toast en vivo, lo agrega al centro de
+notificaciones e invalida las cachés de saldos y transacciones.
+
 ## Chat IA
 
 ### POST /api/chat
