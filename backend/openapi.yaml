@@ -55,6 +55,9 @@ paths:
                   message:
                     type: string
                     example: Arcoins Backend Running successfully 🚀
+                  docs:
+                    type: string
+                    example: /api-docs
 
   /api/auth/register:
     post:
@@ -222,11 +225,11 @@ paths:
                     format: uuid
                     example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
         "401":
-          description: Usuario no autenticado
+          description: Usuario no autenticado o token inválido
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorSuccessResponse"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Billetera no encontrada
           content:
@@ -272,11 +275,11 @@ paths:
                   - currency: EUR
                     amount: 50
         "401":
-          description: Usuario no autenticado
+          description: Usuario no autenticado o token inválido
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorSuccessResponse"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Billetera no encontrada
           content:
@@ -346,13 +349,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: No autorizado para consultar esta billetera (no pertenece al usuario)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorSuccessResponse"
+              example:
+                success: false
+                error: No tienes periso para consultar esta billetera
+        "500":
+          description: Error interno al consultar el saldo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorSuccessResponse"
+              example:
+                success: false
+                error: Error al consultar el saldo
 
   /api/rates:
     get:
       tags:
         - Operaciones Financieras
       summary: Obtener cotización / tasa de cambio
-      description: Consulta la tasa de cambio vigente entre dos divisas. Utiliza la API de ExchangeRate con respaldo de la última cotización almacenada en base de datos.
+      description: Consulta la tasa de cambio vigente entre dos divisas. Utiliza la API de ExchangeRate con respaldo de la última cotización almacenada en base de datos. Requiere autenticación JWT.
+      security:
+        - bearerAuth: []
       parameters:
         - name: base
           in: query
@@ -386,6 +409,14 @@ paths:
               example:
                 success: false
                 error: Los códigos de moneda deben tener 3 letras
+        "401":
+          description: Token no provisto o inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Token de autenticación no proporcionado
         "503":
           description: Servicio no disponible o sin tasas registradas
           content:
@@ -433,11 +464,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorSuccessResponse"
         "401":
-          description: Usuario no autenticado
+          description: Usuario no autenticado o token inválido
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorSuccessResponse"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/transactions:
     get:
@@ -503,17 +534,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorSuccessResponse"
         "401":
-          description: Usuario no autenticado
+          description: Usuario no autenticado o token inválido
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorSuccessResponse"
+                $ref: "#/components/schemas/ErrorResponse"
 
     post:
       tags:
         - Operaciones Financieras
       summary: Crear operación de compra, venta o intercambio de divisas
-      description: Procesa una conversión de monedas calculando la tasa de cambio vigente, deduciendo el saldo origen e incrementando el saldo destino en una transacción atómica.
+      description: |
+        Procesa una conversión de monedas calculando la tasa de cambio vigente, deduciendo el saldo origen e incrementando el saldo destino en una transacción atómica.
+        Aplica una comisión del 0.5% sobre la moneda de origen (el monto mínimo para que la comisión sea calculable es 1.00).
       security:
         - bearerAuth: []
       requestBody:
@@ -533,7 +566,7 @@ paths:
                   transaction:
                     $ref: "#/components/schemas/Transaction"
         "400":
-          description: Tipo inválido, fondos insuficientes o payload erróneo
+          description: Tipo inválido, fondos insuficientes, comisión mínima o payload erróneo
           content:
             application/json:
               schema:
@@ -547,12 +580,16 @@ paths:
                   value:
                     success: false
                     error: Tipo de transacción inválida
+                comision_minima:
+                  value:
+                    success: false
+                    error: El monto es demasiado pequeño para calcular la comisión.
         "401":
-          description: Usuario no autenticado
+          description: Usuario no autenticado o token inválido
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorSuccessResponse"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/payments:
     post:
@@ -594,11 +631,11 @@ paths:
                     success: false
                     error: Fondos insuficientes para completar la transacción.
         "401":
-          description: Usuario no autenticado
+          description: Usuario no autenticado o token inválido
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorSuccessResponse"
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/transfers:
     post:
@@ -661,14 +698,13 @@ paths:
                     success: false
                     error: Fondos insuficientes para completar la transferencia
         "401":
-          description: Usuario no autenticado o token JWT no provisto
+          description: Usuario no autenticado o token JWT no provisto / inválido
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorSuccessResponse"
+                $ref: "#/components/schemas/ErrorResponse"
               example:
-                success: false
-                error: Usuario no autenticado
+                error: Token de autenticación no proporcionado
         "404":
           description: Usuario receptor no encontrado
           content:
@@ -760,7 +796,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
-                error: El mensaje debe ser un texto de hasta 2000 caracteres.
+                error: El mensaje debe ser texto, no puede estar vacío y no puede exceder 2000 caracteres.
         "401":
           description: Autenticación ausente, inválida o expirada
           content:
@@ -838,6 +874,14 @@ components:
           example: Juan
         lastName:
           type: string
+          example: Pérez
+        first_name:
+          type: string
+          description: Alias alternativo aceptado para firstName
+          example: Juan
+        last_name:
+          type: string
+          description: Alias alternativo aceptado para lastName
           example: Pérez
         email:
           type: string
@@ -967,8 +1011,8 @@ components:
           example: COP
         fromAmount:
           type: number
-          minimum: 0.01
-          description: Monto que se entrega
+          minimum: 1.0
+          description: Monto que se entrega (mínimo 1.00 para permitir el cálculo de la comisión del 0.5%)
           example: 50.0
 
     PaymentDto:
@@ -1044,6 +1088,21 @@ components:
           type: string
           format: date-time
           example: 2026-10-19T21:10:00.000Z
+        feeAmount:
+          type: number
+          nullable: true
+          description: Monto de comisión aplicado en la divisa de origen (0.5% en conversiones buy/sell/exchange)
+          example: 0.25
+        feeCurrency:
+          type: string
+          nullable: true
+          description: Código de la divisa en la que se cobró la comisión
+          example: USD
+        feeRate:
+          type: number
+          nullable: true
+          description: Tasa de comisión aplicada (ej. 0.005 para 0.5%)
+          example: 0.005
 
     PaginatedTransactions:
       type: object
